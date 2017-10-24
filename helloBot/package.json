@@ -4,6 +4,7 @@
   "description": "a sample app",
   "dependencies": {
     "body-parser": "^1.15.2",
+    "dotenv": "^4.0.0",
     "express": "^4.14.0",
     "lodash": "^4.17.4",
     "request": "^2.72.0"
