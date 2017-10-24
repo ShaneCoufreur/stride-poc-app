@@ -9,8 +9,10 @@ var cors = require('cors');
 var jsonpath = require('jsonpath');
 var express = expressLib();
 var { Document } = require('adf-builder');
+
+require('dotenv').config();
 express.use(bodyParser.json());
-express.use(bodyParser.urlencoded({extended: true}));
+express.use(bodyParser.urlencoded({ extended: true }));
 express.use(expressLib.static('.'));
 
 var PORT = process.env.PORT;
@@ -20,9 +22,9 @@ app.clientSecret = process.env.CLIENT_SECRET;
 app.environment = process.env.ENV ? process.env.ENV : "production";
 
 if (!PORT || !app.clientId || !app.clientSecret) {
-  console.log ("Usage:");
-  console.log("PORT=<http port> CLIENT_ID=<app client ID> CLIENT_SECRET=<app client secret> node app.js");
-  process.exit();
+    console.log("Usage:");
+    console.log("PORT=<http port> CLIENT_ID=<app client ID> CLIENT_SECRET=<app client secret> node app.js");
+    process.exit();
 }
 
 /**
@@ -51,43 +53,43 @@ var installationStore = {};
  */
 
 function getJWT(req) {
-  //Extract the JWT token from the request
-  //Either from the "jwt" request parameter
-  //Or from the "authorization" header, as "Bearer xxx"
-  var encodedJwt = req.query['jwt']
-      || req.headers['authorization'].substring(7)
-      || req.headers['Authorization'].substring(7);
+    //Extract the JWT token from the request
+    //Either from the "jwt" request parameter
+    //Or from the "authorization" header, as "Bearer xxx"
+    var encodedJwt = req.query['jwt'] ||
+        req.headers['authorization'].substring(7) ||
+        req.headers['Authorization'].substring(7);
 
-  // Decode the base64-encoded token, which contains the context of the call
-  var decodedJwt = jwtUtil.decode(encodedJwt, null, true);
+    // Decode the base64-encoded token, which contains the context of the call
+    var decodedJwt = jwtUtil.decode(encodedJwt, null, true);
 
-  var jwt = {encoded: encodedJwt, decoded: decodedJwt};
-  return jwt;
+    var jwt = { encoded: encodedJwt, decoded: decodedJwt };
+    return jwt;
 }
 
 function validateJWT(req, res, next) {
-  try {
+    try {
 
-    var jwt = getJWT(req);
+        var jwt = getJWT(req);
 
-    var conversationId = jwt.decoded.context.resourceId;
-    var cloudId = jwt.decoded.context.cloudId;
-    var userId = jwt.decoded.sub;
+        var conversationId = jwt.decoded.context.resourceId;
+        var cloudId = jwt.decoded.context.cloudId;
+        var userId = jwt.decoded.sub;
 
-    // Validate the token signature using the app's OAuth secret (created in DAC App Management)
-    // (to ensure the call comes from Stride)
-    jwtUtil.decode(jwt.encoded, app.clientSecret);
+        // Validate the token signature using the app's OAuth secret (created in DAC App Management)
+        // (to ensure the call comes from Stride)
+        jwtUtil.decode(jwt.encoded, app.clientSecret);
 
-    //all good, it's from Stride, add the context to a local variable
-    res.locals.context = {cloudId: cloudId, conversationId: conversationId, userId: userId};
+        //all good, it's from Stride, add the context to a local variable
+        res.locals.context = { cloudId: cloudId, conversationId: conversationId, userId: userId };
 
-    // Continue with the rest of the call chain
-    console.log('Valid JWT');
-    next();
-  } catch (err) {
-    console.log('Invalid JWT');
-    res.sendStatus(403);
-  }
+        // Continue with the rest of the call chain
+        console.log('Valid JWT');
+        next();
+    } catch (err) {
+        console.log('Invalid JWT');
+        res.sendStatus(403);
+    }
 }
 
 /**
@@ -103,46 +105,46 @@ function validateJWT(req, res, next) {
  * You can store this information for later use.
  */
 express.post('/installed',
-    function (req, res) {
-      console.log('app installed in a conversation');
-      var cloudId = req.body.cloudId;
-      var conversationId = req.body.resourceId;
-      var userId = req.body.userId;
+    function(req, res) {
+        console.log('app installed in a conversation');
+        var cloudId = req.body.cloudId;
+        var conversationId = req.body.resourceId;
+        var userId = req.body.userId;
 
 
-      //Store the installation details
-      if (!installationStore[conversationId]) {
-        installationStore[conversationId] = {
-          cloudId: cloudId,
-          conversationId: conversationId,
-          installedBy: userId
+        //Store the installation details
+        if (!installationStore[conversationId]) {
+            installationStore[conversationId] = {
+                cloudId: cloudId,
+                conversationId: conversationId,
+                installedBy: userId
+            }
         }
-      }
 
-      console.log(JSON.stringify(installationStore[conversationId]));
+        console.log(JSON.stringify(installationStore[conversationId]));
 
-      res.sendStatus(200);
+        res.sendStatus(200);
 
-      //Send a message to the conversation to announce the app is ready
-      stride.sendTextMessage(cloudId, conversationId, "Hi there! Thanks for adding me to this conversation. To see me in action, just mention me in a message", function (err, response) {
-        if (err)
-          console.log(err);
-      });
+        //Send a message to the conversation to announce the app is ready
+        stride.sendTextMessage(cloudId, conversationId, "Hi there! Thanks for adding me to this conversation. To see me in action, just mention me in a message", function(err, response) {
+            if (err)
+                console.log(err);
+        });
 
     }
 );
 
 express.post('/uninstalled',
-    function (req, res) {
-      console.log('app uninstalled from a conversation');
-      var cloudId = req.body.cloudId;
-      var conversationId = req.body.resourceId;
-      var userId = req.body.userId;
+    function(req, res) {
+        console.log('app uninstalled from a conversation');
+        var cloudId = req.body.cloudId;
+        var conversationId = req.body.resourceId;
+        var userId = req.body.userId;
 
-      //Remove the installation details
-      installationStore[conversationId] = null;
+        //Remove the installation details
+        installationStore[conversationId] = null;
 
-      res.sendStatus(204);
+        res.sendStatus(204);
     }
 );
 
@@ -165,206 +167,224 @@ express.post('/uninstalled',
 
 express.post('/bot-mention',
     validateJWT,
-    function (req, res) {
-      console.log('bot mention');
-      var cloudId = req.body.cloudId;
-      var conversationId = req.body.conversation.id;
-      var senderId = req.body.message.sender.id;
+    function(req, res) {
+        console.log('bot mention');
+        var cloudId = req.body.cloudId;
+        var conversationId = req.body.conversation.id;
+        var senderId = req.body.message.sender.id;
 
-      stride.sendTextReply(req.body, "OK, I'm on it!", function (err, response) {
+        stride.sendTextReply(req.body, "", function(err, response) {
 
-        //If you don't send a 200, Stride will try to resend it
-        res.sendStatus(200);
+            //If you don't send a 200, Stride will try to resend it
+            res.sendStatus(200);
 
 
-        //Now let's do all the things:
-        convertMessageToPlainText(function () {
-          extractAndSendMentions(function () {
-            getUserDetails(function () {
-              sendMessageWithFormatting(function () {
-                sendMessageWithImage(function () {
-                  updateGlance(function () {
-                    done()
-                  });
-                })
-              })
-            })
-          })
-        })
-      });
-
-      function convertMessageToPlainText(next) {
-
-        stride.sendTextReply(req.body, "Converting the message you just sent to plain text...", function (err, response) {
-
-          //The message is in req.body.message. It is sent using the Atlassian document format.
-          //A plain text representation is available in req.body.message.text
-          var messageText = req.body.message.text;
-          console.log("Message in plain text: " + messageText);
-
-          //You can also use a REST endpoint to convert any Atlassian document to a plain text representation:
-          stride.convertDocToText(req.body.message.body, function (error, response) {
-            console.log("Message converted to text: " + response)
-
-            const doc = new Document();
-            doc.paragraph()
-                .text("In plain text, it looks like this:");
-            doc.paragraph()
-                .text('"' + response + '"');
-            var reply = doc.toJSON();
-
-            stride.sendDocumentReply(req.body, reply, function (err, response) {
-              console.log(response);
-              next();
-            });
-          })
+            //Now let's do all the things:
+            // convertMessageToPlainText(function() {
+            //     extractAndSendMentions(function() {
+            //         getUserDetails(function() {
+            //             sendMessageWithFormatting(function() {
+            //                 sendMessageWithImage(function() {
+            //                     updateGlance(function() {
+            //                         done()
+            //                     });
+            //                 })
+            //             })
+            //         })
+            //     })
+            // })
+            hiFromLuke();
         });
-      }
 
-      function extractAndSendMentions(next) {
-
-        doc = new Document();
-
-        const paragraph = doc.paragraph()
-            .text('The following people were mentioned: ');
-        // Here's how to extract the list of users who were mentioned in this message
-        var mentionNodes = jsonpath.query(req.body, '$..[?(@.type == "mention")]');
-
-        // and how to mention users
-        mentionNodes.forEach(function (mentionNode) {
-
-              var userId = mentionNode.attrs.id;
-              var userMentionText = mentionNode.attrs.text;
-              //If you don't know the user's mention text, call the User API - stride.getUser()
-              paragraph.mention(userId, userMentionText);
-            }
-        );
-
-        var reply = doc.toJSON();
-        stride.sendDocumentReply(req.body, reply, function (err, response) {
-          next();
-        });
-      }
-
-      function sendMessageWithFormatting(next) {
-        stride.sendTextReply(req.body, "Sending a message with plenty of formatting...", function (err, response) {
-          // Here's how to send a reply with a nicely formatted document, using the document builder library adf-builder
-          const doc = new Document();
-          doc.paragraph()
-              .text('Here is some ')
-              .strong('bold test')
-              .text(' and ')
-              .em('text in italics')
-              .text(' as well as ')
-              .link(' a link', 'https://www.atlassian.com')
-              .text(' , emojis ')
-              .emoji(':smile:')
-              .emoji(':rofl:')
-              .emoji(':nerd:')
-              .text(' and some code: ')
-              .code('var i = 0;')
-              .text(' and a bullet list');
-          doc.bulletList()
-              .textItem('With one bullet point')
-              .textItem('And another');
-          doc.panel("info")
-              .paragraph()
-              .text("and an info panel with some text, with some more code below");
-          doc.codeBlock("javascript")
-              .text('var i = 0;\nwhile(true) {\n  i++;\n}');
-
-          doc
-              .paragraph()
-              .text("And a card");
-          const card = doc.applicationCard('With a title')
-              .link('https://www.atlassian.com')
-              .description('With some description, and a couple of attributes')
-              .background('https://www.atlassian.com');
-          card.detail()
-              .title('Type')
-              .text('Task')
-              .icon({
-                url: 'https://ecosystem.atlassian.net/secure/viewavatar?size=xsmall&avatarId=15318&avatarType=issuetype',
-                label: 'Task'
-              })
-          card.detail()
-              .title('User')
-              .text('Joe Blog')
-              .icon({
-                url: 'https://ecosystem.atlassian.net/secure/viewavatar?size=xsmall&avatarId=15318&avatarType=issuetype',
-                label: 'Task'
-              })
-          var reply = doc.toJSON();
-
-          stride.sendDocumentReply(req.body, reply, function (err, response) {
-            console.log(response);
-            next();
-          });
-        });
-      }
-
-      function sendMessageWithImage(next) {
-        stride.sendTextReply(req.body, "Uploading an image and sending it in a message...", function (err, response) {
-
-
-          // To send a file or an image in a message, you first need to upload it
-          var https = require('https');
-          var imgUrl = 'https://media.giphy.com/media/L12g7V0J62bf2/giphy.gif';
-          https.get(imgUrl, function (downloadStream) {
-            stride.sendMedia(cloudId, conversationId, "an_image2.jpg", downloadStream, function (err, response) {
-
-              if (response && JSON.parse(response).data) {
-
-                //Once uploaded, you can include it in a message
-                var mediaId = JSON.parse(response).data.id;
+        function hiFromLuke(next) {
+            stride.sendTextReply(req.body, "Hey, it's Luke!", (err, res) => {
+                let messTxt = req.body.message.text;
+                console.log("Message: " + messTxt);
                 const doc = new Document();
                 doc.paragraph()
-                    .text("and here's that image");
+                    .text("Did you just say " + messTxt + "?");
+                let reply = doc.toJSON();
+                stride.sendDocumentReply(req.body, reply, (err, res) => {
+                    console.log(res);
+                    if (next) {
+                        next();
+                    }
+                });
+            });
+        }
+
+        function convertMessageToPlainText(next) {
+
+            stride.sendTextReply(req.body, "Converting the message you just sent to plain text...", function(err, response) {
+
+                //The message is in req.body.message. It is sent using the Atlassian document format.
+                //A plain text representation is available in req.body.message.text
+                var messageText = req.body.message.text;
+                console.log("Message in plain text: " + messageText);
+
+                //You can also use a REST endpoint to convert any Atlassian document to a plain text representation:
+                stride.convertDocToText(req.body.message.body, function(error, response) {
+                    console.log("Message converted to text: " + response)
+
+                    const doc = new Document();
+                    doc.paragraph()
+                        .text("In plain text, it looks like this:");
+                    doc.paragraph()
+                        .text('"' + response + '"');
+                    var reply = doc.toJSON();
+
+                    stride.sendDocumentReply(req.body, reply, function(err, response) {
+                        console.log(response);
+                        next();
+                    });
+                })
+            });
+        }
+
+        function extractAndSendMentions(next) {
+
+            doc = new Document();
+
+            const paragraph = doc.paragraph()
+                .text('The following people were mentioned: ');
+            // Here's how to extract the list of users who were mentioned in this message
+            var mentionNodes = jsonpath.query(req.body, '$..[?(@.type == "mention")]');
+
+            // and how to mention users
+            mentionNodes.forEach(function(mentionNode) {
+
+                var userId = mentionNode.attrs.id;
+                var userMentionText = mentionNode.attrs.text;
+                //If you don't know the user's mention text, call the User API - stride.getUser()
+                paragraph.mention(userId, userMentionText);
+            });
+
+            var reply = doc.toJSON();
+            stride.sendDocumentReply(req.body, reply, function(err, response) {
+                next();
+            });
+        }
+
+        function sendMessageWithFormatting(next) {
+            stride.sendTextReply(req.body, "Sending a message with plenty of formatting...", function(err, response) {
+                // Here's how to send a reply with a nicely formatted document, using the document builder library adf-builder
+                const doc = new Document();
+                doc.paragraph()
+                    .text('Here is some ')
+                    .strong('bold test')
+                    .text(' and ')
+                    .em('text in italics')
+                    .text(' as well as ')
+                    .link(' a link', 'https://www.atlassian.com')
+                    .text(' , emojis ')
+                    .emoji(':smile:')
+                    .emoji(':rofl:')
+                    .emoji(':nerd:')
+                    .text(' and some code: ')
+                    .code('var i = 0;')
+                    .text(' and a bullet list');
+                doc.bulletList()
+                    .textItem('With one bullet point')
+                    .textItem('And another');
+                doc.panel("info")
+                    .paragraph()
+                    .text("and an info panel with some text, with some more code below");
+                doc.codeBlock("javascript")
+                    .text('var i = 0;\nwhile(true) {\n  i++;\n}');
+
                 doc
-                    .mediaGroup()
-                    .media({type: 'file', id: mediaId, collection: conversationId});
-
+                    .paragraph()
+                    .text("And a card");
+                const card = doc.applicationCard('With a title')
+                    .link('https://www.atlassian.com')
+                    .description('With some description, and a couple of attributes')
+                    .background('https://www.atlassian.com');
+                card.detail()
+                    .title('Type')
+                    .text('Task')
+                    .icon({
+                        url: 'https://ecosystem.atlassian.net/secure/viewavatar?size=xsmall&avatarId=15318&avatarType=issuetype',
+                        label: 'Task'
+                    })
+                card.detail()
+                    .title('User')
+                    .text('Joe Blog')
+                    .icon({
+                        url: 'https://ecosystem.atlassian.net/secure/viewavatar?size=xsmall&avatarId=15318&avatarType=issuetype',
+                        label: 'Task'
+                    })
                 var reply = doc.toJSON();
-                stride.sendDocumentReply(req.body, reply, function (err, response) {
-                  console.log(response);
-                  next();
+
+                stride.sendDocumentReply(req.body, reply, function(err, response) {
+                    console.log(response);
+                    next();
                 });
-              }
             });
-          });
-        });
-      }
+        }
 
-      function getUserDetails(next) {
-        stride.sendTextReply(req.body, "Getting user details for the sender of the message", function (err, response) {
-          stride.getUser(cloudId, senderId, function (err, body) {
-            stride.sendTextReply(req.body, "This message was sent by " + body.displayName, function (err, response) {
-              next();
-            });
-          });
-        });
-      }
+        function sendMessageWithImage(next) {
+            stride.sendTextReply(req.body, "Uploading an image and sending it in a message...", function(err, response) {
 
-      function updateGlance(next) {
-        stride.sendTextReply(req.body, "Updating the glance state...", function (err, response) {
-          //Here's how to update the glance state
 
-          stride.updateGlanceState(
-              cloudId, conversationId, "refapp-glance", "Click me!!", function (err, response) {
-                console.log("glance state updated: " + err + "," + JSON.stringify(response));
-                stride.sendTextReply(req.body, "It should be updated -->", function (err, response) {
-                  next();
+                // To send a file or an image in a message, you first need to upload it
+                var https = require('https');
+                var imgUrl = 'https://media.giphy.com/media/L12g7V0J62bf2/giphy.gif';
+                https.get(imgUrl, function(downloadStream) {
+                    stride.sendMedia(cloudId, conversationId, "an_image2.jpg", downloadStream, function(err, response) {
+
+                        if (response && JSON.parse(response).data) {
+
+                            //Once uploaded, you can include it in a message
+                            var mediaId = JSON.parse(response).data.id;
+                            const doc = new Document();
+                            doc.paragraph()
+                                .text("and here's that image");
+                            doc
+                                .mediaGroup()
+                                .media({ type: 'file', id: mediaId, collection: conversationId });
+
+                            var reply = doc.toJSON();
+                            stride.sendDocumentReply(req.body, reply, function(err, response) {
+                                console.log(response);
+                                next();
+                            });
+                        }
+                    });
                 });
-              });
+            });
+        }
 
-        });
-      }
+        function getUserDetails(next) {
+            stride.sendTextReply(req.body, "Getting user details for the sender of the message", function(err, response) {
+                stride.getUser(cloudId, senderId, function(err, body) {
+                    stride.sendTextReply(req.body, "This message was sent by " + body.displayName, function(err, response) {
+                        next();
+                    });
+                });
+            });
+        }
 
-      function done() {
-        stride.sendTextReply(req.body, "OK, I'm done. Thanks for watching!", function () {
-          console.log("done.");
-        });
-      }
+        function updateGlance(next) {
+            stride.sendTextReply(req.body, "Updating the glance state...", function(err, response) {
+                //Here's how to update the glance state
+
+                stride.updateGlanceState(
+                    cloudId, conversationId, "refapp-glance", "Click me!!",
+                    function(err, response) {
+                        console.log("glance state updated: " + err + "," + JSON.stringify(response));
+                        stride.sendTextReply(req.body, "It should be updated -->", function(err, response) {
+                            next();
+                        });
+                    });
+
+            });
+        }
+
+        function done() {
+            stride.sendTextReply(req.body, "OK, I'm done. Thanks for watching!", function() {
+                console.log("done.");
+            });
+        }
     }
 );
 
@@ -378,16 +398,16 @@ express.post('/bot-mention',
 
 express.post('/conversation-updated',
     validateJWT,
-    function (req, res) {
-      console.log('A conversation was changed: ' + req.body.conversation.id + ', change: ' + req.body.action);
-      res.sendStatus(200);
+    function(req, res) {
+        console.log('A conversation was changed: ' + req.body.conversation.id + ', change: ' + req.body.action);
+        res.sendStatus(200);
     });
 
 express.post('/roster-updated',
     validateJWT,
-    function (req, res) {
-      console.log('A user joined or left a conversation: ' + req.body.conversation.id + ', change: ' + req.body.action);
-      res.sendStatus(200);
+    function(req, res) {
+        console.log('A user joined or left a conversation: ' + req.body.conversation.id + ', change: ' + req.body.action);
+        res.sendStatus(200);
     });
 
 /**
@@ -399,8 +419,8 @@ express.post('/roster-updated',
 
 express.get('/module/config',
     validateJWT,
-    function (req, res) {
-      res.redirect("/app-module-config.html");
+    function(req, res) {
+        res.redirect("/app-module-config.html");
     });
 
 // Get the configuration state: is it configured or not for the conversation?
@@ -408,50 +428,50 @@ express.get('/module/config/state',
     // cross domain request
     cors(),
     validateJWT,
-    function (req, res) {
-      var conversationId = res.locals.context.conversationId;
-      console.log("getting config state for conversation " + conversationId);
-      var config = configStore[res.locals.context.conversationId];
-      var state = {configured: true};
-      if (!config)
-        state.configured = false;
-      console.log("returning config state: " + JSON.stringify(state));
-      res.send(JSON.stringify(state));
+    function(req, res) {
+        var conversationId = res.locals.context.conversationId;
+        console.log("getting config state for conversation " + conversationId);
+        var config = configStore[res.locals.context.conversationId];
+        var state = { configured: true };
+        if (!config)
+            state.configured = false;
+        console.log("returning config state: " + JSON.stringify(state));
+        res.send(JSON.stringify(state));
     });
 
 // Get the configuration content from the configuration dialog
 express.get('/module/config/content',
     validateJWT,
-    function (req, res) {
-      var conversationId = res.locals.context.conversationId;
-      console.log("getting config content for conversation " + conversationId);
-      var config = configStore[res.locals.context.conversationId];
-      if (!config)
-        config = {
-          notificationLevel: "NONE"
-        }
-      res.send(JSON.stringify(config));
+    function(req, res) {
+        var conversationId = res.locals.context.conversationId;
+        console.log("getting config content for conversation " + conversationId);
+        var config = configStore[res.locals.context.conversationId];
+        if (!config)
+            config = {
+                notificationLevel: "NONE"
+            }
+        res.send(JSON.stringify(config));
     });
 
 // Save the configuration content from the configuration dialog
 express.post('/module/config/content',
     validateJWT,
-    function (req, res) {
-      var cloudId = res.locals.context.cloudId;
-      var conversationId = res.locals.context.conversationId;
-      console.log("saving config content for conversation " + conversationId + ": " + JSON.stringify(req.body));
-      configStore[conversationId] = req.body;
+    function(req, res) {
+        var cloudId = res.locals.context.cloudId;
+        var conversationId = res.locals.context.conversationId;
+        console.log("saving config content for conversation " + conversationId + ": " + JSON.stringify(req.body));
+        configStore[conversationId] = req.body;
 
-      stride.updateConfigurationState(cloudId, conversationId, 'refapp-config', true, function (err, body) {
-        res.sendStatus(204);
-      })
+        stride.updateConfigurationState(cloudId, conversationId, 'refapp-config', true, function(err, body) {
+            res.sendStatus(204);
+        })
     });
 
 
 express.get('/module/dialog',
     validateJWT,
-    function (req, res) {
-      res.redirect("/app-module-dialog.html");
+    function(req, res) {
+        res.redirect("/app-module-dialog.html");
     });
 
 /**
@@ -484,13 +504,13 @@ express.get('/module/glance/state',
     // cross domain request
     cors(),
     validateJWT,
-    function (req, res) {
-      res.send(
-          JSON.stringify({
-            "label": {
-              "value": "Click me!"
-            }
-          }));
+    function(req, res) {
+        res.send(
+            JSON.stringify({
+                "label": {
+                    "value": "Click me!"
+                }
+            }));
     });
 
 /*
@@ -512,8 +532,8 @@ express.get('/module/glance/state',
 
 express.get('/module/sidebar',
     validateJWT,
-    function (req, res) {
-      res.redirect("/app-module-sidebar.html");
+    function(req, res) {
+        res.redirect("/app-module-sidebar.html");
     });
 
 /**
@@ -523,16 +543,16 @@ express.get('/module/sidebar',
 
 express.post('/ui/ping',
     validateJWT,
-    function (req, res) {
-      console.log('Received a call from the app frontend ' + JSON.stringify(req.body));
-      var cloudId = res.locals.context.cloudId;
-      var conversationId = res.locals.context.conversationId;
-      stride.sendTextMessage(cloudId, conversationId, "Pong", function (err, response) {
-        if (!err)
-          res.send(JSON.stringify({status: "Pong"}));
-        else
-          res.send(JSON.stringify({status: "Failed"}));
-      })
+    function(req, res) {
+        console.log('Received a call from the app frontend ' + JSON.stringify(req.body));
+        var cloudId = res.locals.context.cloudId;
+        var conversationId = res.locals.context.conversationId;
+        stride.sendTextMessage(cloudId, conversationId, "Pong", function(err, response) {
+            if (!err)
+                res.send(JSON.stringify({ status: "Pong" }));
+            else
+                res.send(JSON.stringify({ status: "Failed" }));
+        })
 
     }
 );
@@ -544,18 +564,18 @@ express.post('/ui/ping',
  * The variable ${host} is substituted based on the base URL of your app.
  */
 
-express.get('/descriptor', function (req, res) {
-  fs.readFile('./app-descriptor.json', function (err, descriptorTemplate) {
-    var template = _.template(descriptorTemplate);
-    var descriptor = template({
-      host: 'https://' + req.headers.host
+express.get('/descriptor', function(req, res) {
+    fs.readFile('./app-descriptor.json', function(err, descriptorTemplate) {
+        var template = _.template(descriptorTemplate);
+        var descriptor = template({
+            host: 'https://' + req.headers.host
+        });
+        res.set('Content-Type', 'application/json');
+        res.send(descriptor);
     });
-    res.set('Content-Type', 'application/json');
-    res.send(descriptor);
-  });
 });
 
 
-http.createServer(express).listen(PORT, function () {
-  console.log('App running on port ' + PORT);
+http.createServer(express).listen(PORT, function() {
+    console.log('App running on port ' + PORT);
 });
