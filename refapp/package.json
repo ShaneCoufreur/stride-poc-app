@@ -1,10 +1,11 @@
 {
-    "name": "banana-api-tutorial-simpleBot",
+    "name": "stride-poc-app",
     "repository": "bitbucket:atlassian/stride-api-tutorial",
-    "description": "a sample app",
+    "description": "A demo/poc CE powered app for Stride",
     "scripts": {
         "start": "node app.js"
     },
+    "version": "0.1.0",
     "dependencies": {
         "@atlaskit/css-reset": "^1.1.4",
         "@atlaskit/reduced-ui-pack": "^5.5.0",

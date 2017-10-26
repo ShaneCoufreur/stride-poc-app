@@ -1,22 +1,22 @@
-var _ = require('lodash');
-var fs = require('fs');
-var expressLib = require('express');
-var bodyParser = require('body-parser');
-var jwtUtil = require('jwt-simple');
-var http = require('http');
-var request = require('request');
-var cors = require('cors');
-var jsonpath = require('jsonpath');
-var express = expressLib();
-var { Document } = require('adf-builder');
+const _ = require('lodash');
+const fs = require('fs');
+const expressLib = require('express');
+const bodyParser = require('body-parser');
+const jwtUtil = require('jwt-simple');
+const http = require('http');
+const request = require('request');
+const cors = require('cors');
+const jsonpath = require('jsonpath');
+const express = expressLib();
+const { Document } = require('adf-builder');
 
 require('dotenv').config();
 express.use(bodyParser.json());
 express.use(bodyParser.urlencoded({ extended: true }));
 express.use(expressLib.static('.'));
 
-var PORT = process.env.PORT;
-var app = {};
+let PORT = process.env.PORT;
+let app = {};
 app.clientId = process.env.CLIENT_ID;
 app.clientSecret = process.env.CLIENT_SECRET;
 app.environment = process.env.ENV ? process.env.ENV : "production";
@@ -448,7 +448,7 @@ express.get('/module/config/content',
         var config = configStore[res.locals.context.conversationId];
         if (!config)
             config = {
-                notificationLevel: "NONE"
+                notificationLevel: "ON"
             }
         res.send(JSON.stringify(config));
     });
