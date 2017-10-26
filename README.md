@@ -1,6 +1,6 @@
 # POC App for StrideCon
 
-> Based on the Stride supported tutorial app [bitbucket]](https://bitbucket.org/atlassian/stride-api-tutorial)
+> Based on the Stride supported tutorial app [bitbucket](https://bitbucket.org/atlassian/stride-api-tutorial)
 
 See https://developer.atlassian.com/cloud/stride/getting-started/ for more help
 
