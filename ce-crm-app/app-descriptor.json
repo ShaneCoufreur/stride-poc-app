@@ -1,136 +1,155 @@
 {
-    "baseUrl": "${host}",
-    "key": "refapp",
-    "lifecycle": {
-        "installed": "/installed",
-        "uninstalled": "/uninstalled"
-    },
-    "modules": {
-        "chat:bot": [{
-            "key": "refapp-bot",
-            "mention": {
-                "url": "/bot-mention"
-            },
-            "directMessage": {
-                "url": "/bot-mention"
-            }
-        }],
-        "chat:inputAction": [{
-            "key": "refapp-input-action",
-            "name": {
-                "value": "Open App Dialog"
-            },
-            "target": "refapp-dialog"
-        }],
-        "chat:dialog": [{
-                "key": "refapp-dialog",
-                "title": {
-                    "value": "App Dialog"
-                },
-                "options": {
-                    "size": {
-                        "width": "500px",
-                        "height": "300px"
-                    },
-                    "primaryAction": {
-                        "key": "action-appendMessage",
-                        "name": {
-                            "value": "Append Message"
-                        }
-                    },
-                    "secondaryActions": [{
-                            "key": "action-close",
-                            "name": {
-                                "value": "Close"
-                            }
-                        },
-                        {
-                            "key": "action-openSidebar",
-                            "name": {
-                                "value": "Open Sidebar"
-                            }
-                        }
-                    ]
-                },
-                "url": "/module/dialog",
-                "authentication": "jwt"
-            },
-            {
-                "key": "refapp-dialog-config",
-                "title": {
-                    "value": "App Configuration"
-                },
-                "options": {
-                    "size": {
-                        "width": "500px",
-                        "height": "300px"
-                    },
-                    "primaryAction": {
-                        "key": "action-save",
-                        "name": {
-                            "value": "Save"
-                        }
-                    },
-                    "secondaryActions": [{
-                        "key": "action-close",
-                        "name": {
-                            "value": "Close"
-                        }
-                    }]
-                },
-                "url": "/module/config",
-                "authentication": "jwt"
-            }
-        ],
-        "chat:sidebar": [{
-            "key": "refapp-sidebar",
-            "name": {
-                "value": "App Sidebar"
-            },
-            "url": "/module/sidebar",
-            "authentication": "jwt"
-        }],
-        "chat:glance": [{
-            "key": "refapp-glance",
-            "name": {
-                "value": "App Glance"
-            },
-            "icon": {
-                "url": "/img/logo.png",
-                "url@2x": "/img/logo.png"
-            },
-            "target": "refapp-sidebar",
-            "queryUrl": "/module/glance/state",
-            "authentication": "jwt"
-        }],
-        "chat:messageAction": [{
-            "key": "refapp-message-action",
-            "name": {
-                "value": "Send to Dialog"
-            },
-            "target": "refapp-dialog"
-        }],
-        "chat:configuration": [{
-            "key": "refapp-config",
-            "page": {
-                "target": "refapp-dialog-config"
-            },
-            "state": {
-                "url": "/module/config/state"
-            },
-            "authentication": "jwt"
-        }],
-        "chat:webhook": [{
-                "key": "refapp-webhook-conversation",
-                "event": "conversation:updates",
-                "url": "/conversation-updated"
-            },
-            {
-                "key": "refapp-webhook-roster",
-                "event": "roster:updates",
-                "url": "/roster-updated"
-            }
+  "baseUrl": "${host}",
+  "key": "cebot",
+  "lifecycle": {
+    "installed": "/installed",
+    "uninstalled": "/uninstalled"
+  },
 
-        ]
-    }
+  "modules": {
+    "chat:bot": [
+      {
+        "key": "cebot-bot",
+        "mention": {
+          "url": "/bot-mention"
+        },
+        "directMessage": {
+          "url": "/bot-mention"
+        }
+      }
+    ],
+    "chat:inputAction": [
+      {
+        "key": "cebot-input-action",
+        "name": {
+          "value": "Open App Dialog"
+        },
+        "target": "refapp-dialog"
+      }
+    ],
+    "chat:dialog": [
+      {
+        "key": "cebot-dialog",
+        "title": {
+          "value": "App Dialog"
+        },
+        "options": {
+          "size": {
+            "width": "500px",
+            "height": "300px"
+          },
+          "primaryAction":  {
+            "key": "action-appendMessage",
+            "name": {
+              "value": "Append Message"
+            }
+          },
+          "secondaryActions": [
+            {
+              "key": "action-close",
+              "name": {
+                "value": "Close"
+              }
+            },
+            {
+              "key": "action-openSidebar",
+              "name": {
+                "value": "Open Sidebar"
+              }
+            }
+          ]
+        },
+        "url": "/module/dialog",
+        "authentication": "jwt"
+      },
+      {
+        "key": "cebot-dialog-config",
+        "title": {
+          "value": "App Configuration"
+        },
+        "options": {
+          "size": {
+            "width": "500px",
+            "height": "300px"
+          },
+          "primaryAction":  {
+            "key": "action-save",
+            "name": {
+              "value": "Save"
+            }
+          },
+          "secondaryActions": [
+            {
+              "key": "action-close",
+              "name": {
+                "value": "Close"
+              }
+            }
+          ]
+        },
+        "url": "/module/config",
+        "authentication": "jwt"
+      }
+    ],
+    "chat:sidebar": [
+      {
+        "key": "cebot-sidebar",
+        "name": {
+          "value": "App Sidebar"
+        },
+        "url": "/module/sidebar",
+        "authentication": "jwt"
+      }
+    ],
+    "chat:glance": [
+      {
+        "key": "cebot-glance",
+        "name": {
+          "value": "App Glance"
+        },
+        "icon": {
+          "url": "/img/logo.png",
+          "url@2x": "/img/logo.png"
+        },
+        "target": "refapp-sidebar",
+        "queryUrl": "/module/glance/state",
+        "authentication": "jwt"
+      }
+    ],
+    "chat:messageAction" :[
+      {
+        "key": "cebot-message-action",
+        "name": {
+          "value": "Send to Dialog"
+        },
+        "target": "cebot-dialog"
+      }
+    ],
+    "chat:configuration" : [
+      {
+        "key": "cebot-config",
+        "page": {
+          "target": "cebot-dialog-config"
+        },
+        "state": {
+          "url": "/module/config/content"
+        },
+        "authentication": "jwt"
+      }
+    ],
+    "chat:webhook": [
+      {
+        "key": "cebot-webhook-conversation",
+        "event": "conversation:updates",
+        "url": "/conversation-updated"
+      },
+      {
+        "key": "cebot-webhook-roster",
+        "event": "roster:updates",
+        "url": "/roster-updated"
+      }
+
+    ]
+  }
 }
+
