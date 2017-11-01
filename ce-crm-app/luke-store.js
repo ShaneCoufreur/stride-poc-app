@@ -8,21 +8,36 @@ const db = low(adapter)
 db.defaults({ instances: [], user: {} }).write();
 // var instances = db.addCollection('instances');
 
-const saveInstance = (conversationId, name, instanceToken, elementKey, instanceId) => {
+const saveNewInstance = (conversationId, flavor, instanceBody) => {
     // store the instance token with the roomId
     let obj = {
         conversationId: conversationId,
-        name: name,
-        elementKey: elementKey,
-        token: instanceToken,
-        instanceId: instanceId,
-        formulaId: null
+        name: instanceBody.name,
+        elementKey: instanceBody.elementKey,
+        token: instanceBody.token,
+        instanceId: instanceBody.id,
+        appFlavor: flavor,
+        formula: {
+            id: null,
+            instanceId: null,
+            objects: []
+        }
     };
     // Add a post
     db.get('instances')
         .push(obj)
         .write();
 };
+
+const updateInstance = (conversationId, flavor, instanceBody) => {
+    // update relative instance body with formula info
+
+    db.get('instances')
+        .find({ conversationId: conversationId })
+        .value()
+        .assign({ title: 'hi!' })
+        .write();
+}
 
 const getInstance = (conversationId) => {
     // getPosts
@@ -34,6 +49,6 @@ const getInstance = (conversationId) => {
 }
 
 module.exports = {
-    saveInstance: saveInstance,
+    createInstance: saveNewInstance,
     getInstance: getInstance
 };

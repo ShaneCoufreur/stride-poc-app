@@ -8,6 +8,7 @@
     },
     "dependencies": {
         "@atlaskit/css-reset": "^1.1.4",
+        "@atlaskit/icon": "^10.1.2",
         "@atlaskit/reduced-ui-pack": "^5.5.0",
         "adf-builder": "^1.2.0",
         "body-parser": "^1.15.2",

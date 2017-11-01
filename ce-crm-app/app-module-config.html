@@ -6,11 +6,14 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>App Configuration</title>
+    <title>CRM Configuration</title>
 
     <!-- Import AtlasKit: https://atlaskit.atlassian.com -->
     <link rel="stylesheet" href="node_modules/@atlaskit/css-reset/dist/bundle.css" />
     <link rel="stylesheet" href="node_modules/@atlaskit/reduced-ui-pack/dist/bundle.css" />
+
+    <!-- specific css -->
+    <link rel="stylesheet" href="ce-style.css">
 
     <!-- Import JQuery -->
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
@@ -111,13 +114,83 @@
         <input type="button" class="ak-button" name="connect" value="Connect to Salesforce" id="connect1" onclick="connectToProvider()">
     </div>
 
-    <hr />
+    
+    <div class="ak-field-group object-label">
+      <label for="object">Objects</label>
+    </div>
 
-    <p>
-        To undo configuration state:
-        <button class="ak-button">Unconfigure!</button>
+    <ul class="mapping-list">
+      <li width="300">
+          <span class="object-name">Leads</span>
+          <span class="mapping-actions">
+              edit <svg focusable="false" class="icon edit-button"><use xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#ak-icon-editor/edit"></use></svg>
+              <svg focusable="false" class="icon done-button"><use xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#ak-icon-check-circle"></use></svg>
+              del <svg focusable="false" class="icon remove-button"><use xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#ak-icon-editor/remove"></use></svg>
+          </span>
+          <div class="notification-group-container">
+            <ul class="clearfix group-item">
+                <li class="ak-field-checkbox">
+                    <input type="checkbox" class="notification-item" id="Leads_Create" data-id="create" checked="">
+                    <label for="Leads_Create">Create</label>
+                </li>
+                <li class="ak-field-checkbox">
+                    <input type="checkbox" class="notification-item" id="Leads_update" data-id="update" checked="">
+                    <label for="Leads_update">Update</label>
+                </li>
+            </ul>
+          </div>
+            <div class="notification-group-container">
+                <p>Notify room with activity from:</p>
+                <ul class="notification-group-list">
+                    <li class="clearfix group-item">
+                      <h2>Pull requests</h2>
+                      <ul class="notification-list clearfix">
+                          <li class="ak-field-checkbox">
+                            <input type="checkbox" class="notification-item" id="Leads__pullrequest_fulfilled" data-id="pullrequest:fulfilled" checked="">
+                            <label for="Leads__pullrequest_fulfilled">Merged</label>
+                          </li>
+                          <li class="ak-field-checkbox">
+                            <input type="checkbox" class="notification-item" id="Leads__pullrequest_approved" data-id="pullrequest:approved" checked="">
+                            <label for="Leads__pullrequest_approved">Approved</label>
+                          </li>
+                          <li class="ak-field-checkbox">
+                            <input type="checkbox" class="notification-item" id="Leads__pullrequest_unapproved" data-id="pullrequest:unapproved" checked="">
+                            <label for="Leads__pullrequest_unapproved">Unapproved</label>
+                          </li>
+                          <li class="ak-field-checkbox">
+                            <input type="checkbox" class="notification-item" id="Leads__pullrequest_rejected" data-id="pullrequest:rejected">
+                            <label for="Leads__pullrequest_rejected">Declined</label>
+                          </li>
+                          <li class="ak-field-checkbox">
+                            <input type="checkbox" class="notification-item" id="Leads__pullrequest_comment_created" data-id="pullrequest:comment_created">
+                            <label for="Leads__pullrequest_comment_created">Commented</label>
+                          </li>
+                          <li class="ak-field-checkbox">
+                            <input type="checkbox" class="notification-item" id="Leads__pullrequest_created" data-id="pullrequest:created" checked="">
+                            <label for="Leads__pullrequest_created">Created</label>
+                          </li>
+                      </ul>
+                    </li>
+                </ul>
+              </div>
+      </li>
+      <!--
+      <li>
+        <span class="object-name">Accounts</span>
+        <span class="mapping-actions"></span>
+      </li>
+      <li>
+        <span class="object-name">Opportunities</span>
+        <span class="mapping-actions"></span>
+      </li>
+      <li>
+        <span class="object-name">Contacts</span>
+        <span class="mapping-actions"></span>
+      </li>
+    -->
+      
+    </ul>
 
-    </p>
 </body>
 
 </html>
