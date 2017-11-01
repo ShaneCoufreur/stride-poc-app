@@ -101,29 +101,6 @@ app.post('/uninstalled', (req, res) => {
     res.sendStatus(204);
 });
 
-const testLeads = {
-    "00Q1I000003BYc6UAG": {
-        "zipcode": "78701",
-        "phone": "(850) 644-4200",
-        "name": "Bertha Boxer",
-        "industry": "Agriculture",
-        "state": "FL",
-        "id": "00Q1I000003BYc6UAG",
-        "url": "https://na73.lightning.force.com/one/one.app#/sObject/00Q1I000003BYc6UAG/view",
-        "status": "Working - Contacted"
-    },
-    "00Q1I000003BYc6BBB": {
-        "zipcode": "78666",
-        "phone": "(505) 644-4200",
-        "name": "Alice Baker",
-        "industry": "Agriculture",
-        "state": "FL",
-        "id": "00Q1I000003BYc6BBB",
-        "url": "https://na73.lightning.force.com/one/one.app#/sObject/00Q1I000003BYc6UAG/view",
-        "status": "Open - New"
-    },
-}
-
 
 function myLeadCard(lead) {
     const doc = new Document();
@@ -154,14 +131,47 @@ function myLeadCard(lead) {
     return doc.toJSON();
 }
 
-function replyWithLead(req, res, next) {
+function getLead(conv, id, then) {
+
+    const elem = lukeStore.getInstance(conv).token;
+
+    var options = {
+        url: 'https://' + (process.env.CE_ENV || 'api') + '.cloud-elements.com/elements/api-v2/hubs/crm/stride-crm-lead/' + id,
+        headers: {
+            'authorization': "User " + process.env.CE_USER + ", Organization " + process.env.CE_ORG + ", Element " + elem,
+            'accept': "application/json",
+        },
+        method: 'GET',
+        json: true
+    };
+
+    console.log("Calling with options: " + prettify_json(options));
+
+    request(options, (err, response, body) => {
+        checkForErrors(err, response, body);
+        console.log("Yo, got an answer: " + prettify_json(body));
+        then(body);
+    })
+}
+
+function replyWithLead(req, next, convo) {
     const reqBody = req.body;
+    const cloudId = req.body.cloudId;
+    const conversationId = req.body.conversation.id;
 
-    const document = myLeadCard(testLeads["00Q1I000003BYc6UAG"]);
+    const match = /lead ([A-Za-z0-9]+)/.exec(req.body.message.text);
+    var id = "00Q1I000003BYc6UAG";
+    if (match) {
+        id = match[1];
+    }
 
-    stride.reply({ reqBody, document })
-        .then(() => res.sendStatus(200))
-        .catch(err => console.error('  Something went wrong', prettify_json(err)));
+    getLead(convo, id, (lead) => {
+            if (lead) {
+                const document = myLeadCard(lead);
+                stride.sendMessage({ cloudId, conversationId, document })
+                    .catch(err => console.error('  Something went wrong', prettify_json(err)));
+            }
+        })
 }
 
 app.post('/message',
@@ -170,19 +180,22 @@ app.post('/message',
         console.log('- bot message', prettify_json(req.body));
         res.sendStatus(200);
         const reqBody = req.body;
+        const cloudId = req.body.cloudId;
+        const conversationId = req.body.conversation.id;
 
         var msg = req.body.message.text;
         var pat = /[0-9A-Za-z]{7,}/g;
         var m;
         while ((m = pat.exec(msg)) !== null) {
             console.log("Checking <" + m[0] + ">");
-            var lead = testLeads[m[0]];
-            if (lead) {
-                const document = myLeadCard(lead);
+            getLead(conversationId, m[0], (lead) => {
+                if (lead) {
+                    const document = myLeadCard(lead);
 
-                stride.reply({ reqBody, document })
-                    .catch(err => console.error('  Something went wrong', prettify_json(err)));
-            }
+                    stride.sendMessage({ cloudId,conversationId, document })
+                        .catch(err => console.error('  Something went wrong', prettify_json(err)));
+                }
+            })
         }
     })
 
@@ -209,7 +222,8 @@ app.post('/bot-mention',
         console.log('- bot mention', prettify_json(req.body));
 
         if (/lead/.exec(req.body.message.text)) {
-            return replyWithLead(req, res, next);
+            res.sendStatus(200);
+            return replyWithLead(req, next, req.body.conversation.id);
         }
 
         const reqBody = req.body;
@@ -223,7 +237,7 @@ app.post('/bot-mention',
             // Now let's do the time-consuming things:
             .then(() => showCaseHighLevelFeatures({ reqBody }))
             //.then(() => demoLowLevelFunctions({reqBody}))
-            //.then(allDone)    
+            //.then(allDone)
             .then(() => showInstance(reqBody.conversation.id))
             .then(r => stride.replyWithText({ reqBody, text: "Hey, my Cloud Elements instance id is: " + r }))
             .catch(err => console.error('  Something went wrong', prettify_json(err)));
