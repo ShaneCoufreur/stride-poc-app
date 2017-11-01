@@ -3,119 +3,121 @@
 <!-- Sample implementation of a chat:configuration module -->
 
 <html lang="en">
+
 <head>
-  <meta charset="UTF-8">
-  <title>App Configuration</title>
+    <meta charset="UTF-8">
+    <title>App Configuration</title>
 
-  <!-- Import AtlasKit: https://atlaskit.atlassian.com -->
-  <link rel="stylesheet" href="node_modules/@atlaskit/css-reset/dist/bundle.css"/>
-  <link rel="stylesheet" href="node_modules/@atlaskit/reduced-ui-pack/dist/bundle.css"/>
+    <!-- Import AtlasKit: https://atlaskit.atlassian.com -->
+    <link rel="stylesheet" href="node_modules/@atlaskit/css-reset/dist/bundle.css" />
+    <link rel="stylesheet" href="node_modules/@atlaskit/reduced-ui-pack/dist/bundle.css" />
 
-  <!-- Import JQuery -->
-  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+    <!-- Import JQuery -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
 
-  <!-- Import the Stride Javascript API -->
-  <script src='https://dev-lib.stride.com/javascript/simple-xdm.js'></script>
+    <!-- Import the Stride Javascript API -->
+    <script src='https://dev-lib.stride.com/javascript/simple-xdm.js'></script>
 
-  <script>
-    $(document).ready(function () {
+    <script>
+        $(document).ready(function() {
 
-      /**
-       * Load configuration settings from the app backend for this conversation
-       */
-      AP.auth.withToken(function (err, token) {
-        $.ajax(
-            {
-              type: 'GET',
-              url: '/module/config/content',
-              headers: {'Authorization': 'Bearer ' + token},
-              dataType: 'json',
-              success: function (data) {
-                var notificationLevel = data.notificationLevel;
-                switch(notificationLevel) {
-                  case "INSTANT":
-                    $("#option1").prop("checked", true);
-                    break;
-                  case "DAILY":
-                    $("#option2").prop("checked", true);
-                    break;
-                  default:
-                    $("#option3").prop("checked", true);
-                }
-              },
-              error: function (data) {
-                console.log(data);
-              }
-            });
-      });
-
-      /**
-       * Call the app backend to save configuration settings when the user clicks on the "Save" action
-       */
-      AP.register({
-        "dialog-button-clicked": function (event, closeDialog) {
-          if (event.action === "action-save") {
-
-            //events are currently processed synchronously in the JavaScript API. Using this makes sure the dialog
-            //doesn't close before the AJAX call completes
-            closeDialog(false);
-
-            var notificationLevel = $("input[id=option1]:checked").val() ? "INSTANT" :
-                $("input[id=option2]:checked").val() ? "DAILY" : "NONE";
-
-            AP.auth.withToken(function (err, token) {
-              $.ajax(
-                  {
-                    type: 'POST',
+            /**
+             * Load configuration settings from the app backend for this conversation
+             */
+            AP.auth.withToken(function(err, token) {
+                $.ajax({
+                    type: 'GET',
                     url: '/module/config/content',
-                    headers: {'Authorization': 'Bearer ' + token},
-                    data: {'notificationLevel': notificationLevel},
-                    dataType: 'json',
-                    success: function (data) {
-                      console.log("saved settings");
-                      AP.dialog.close();
+                    headers: {
+                        'Authorization': 'Bearer ' + token
                     },
-                    error: function (data) {
-                      console.log("Error" + data);
+                    dataType: 'json',
+                    success: function(data) {
+                        var notificationLevel = data.notificationLevel;
+                        switch (notificationLevel) {
+                            case "INSTANT":
+                                $("#option1").prop("checked", true);
+                                break;
+                            case "DAILY":
+                                $("#option2").prop("checked", true);
+                                break;
+                            default:
+                                $("#option3").prop("checked", true);
+                        }
+                    },
+                    error: function(data) {
+                        console.log(data);
                     }
-                  });
+                });
             });
 
-          }
-          if (event.action === "action-close") {
-            console.log("closing dialog")
-          }
+            /**
+             * Call the app backend to save configuration settings when the user clicks on the "Save" action
+             */
+            AP.register({
+                "dialog-button-clicked": function(event, closeDialog) {
+                    if (event.action === "action-save") {
+
+                        //events are currently processed synchronously in the JavaScript API. Using this makes sure the dialog
+                        //doesn't close before the AJAX call completes
+                        closeDialog(false);
+
+                        var notificationLevel = $("input[id=option1]:checked").val() ? "INSTANT" :
+                            $("input[id=option2]:checked").val() ? "DAILY" : "NONE";
+
+                        AP.auth.withToken(function(err, token) {
+                            $.ajax({
+                                type: 'POST',
+                                url: '/module/config/content',
+                                headers: {
+                                    'Authorization': 'Bearer ' + token
+                                },
+                                data: {
+                                    'notificationLevel': notificationLevel
+                                },
+                                dataType: 'json',
+                                success: function(data) {
+                                    console.log("saved settings");
+                                    AP.dialog.close();
+                                },
+                                error: function(data) {
+                                    console.log("Error" + data);
+                                }
+                            });
+                        });
+
+                    }
+                    if (event.action === "action-close") {
+                        console.log("closing dialog")
+                    }
+                }
+            })
+        });
+
+        function connectToProvider() {
+            AP.auth.withToken(function(err, token) {
+                window.open("/login/salesforce?jwt=" + token);
+            });
         }
-      })
-    });
-  </script>
+    </script>
 </head>
+
 <body>
-<p>This is a configuration page for the app. You can use it to ask users to configure your app for this specific
-  conversation. For example: log into your app (3LO) or configure a filter for notifications they want to receive
-  in the conversation. </p>
-
-  <ul>
-    <li><a href="/login/salesforce" target="_new">Login to Salesforce</a></li>
-  </ul>
-
-<form>
-  <fieldset class="ak-field-group">
-    <legend><span>Example notification options</span></legend>
-    <div class="ak-field-radio">
-      <input type="radio" name="option" id="option1" value="option1">
-      <label for="option1">Send a notification every time a new object is created</label>
+    <img src="https://login.salesforce.com/img/logo198.png" width="80">
+    <p>
+        Please use the below link to log in to Salesforce. After you're done, please close this dialog!
+    </p>
+    <div class="ak-button-group">
+        <input type="button" class="ak-button" name="connect" value="Connect to Salesforce" id="connect1" onclick="connectToProvider()">
     </div>
-    <div class="ak-field-radio">
-      <input type="radio" name="option" id="option2" value="option2">
-      <label for="option2">Send a daily digest</label>
-    </div>
-    <div class="ak-field-radio">
-      <input type="radio" name="option" id="option3" value="option3">
-      <label for="option3">No notifications, kthxbye</label>
-    </div>
-  </fieldset>
-</form>
 
+    <hr />
+
+    <p>
+        To undo configuration state:
+        <button class="ak-button">Unconfigure!</button>
+
+    </p>
 </body>
+
 </html>

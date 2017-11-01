@@ -1,4 +1,5 @@
 require('dotenv').config();
+const request = require('request');
 
 const postInstanceBody = (elementKey, code) => {
     let postInstanceBody = {};
@@ -27,9 +28,84 @@ const postInstanceBody = (elementKey, code) => {
         default:
             break;
     }
-    return
+    return postInstanceBody;
 };
 
+const getCRMLeads = (elementToken) => {
+    var options = {
+        method: 'GET',
+        url: 'https://' + (process.env.CE_ENV || 'api') + '.cloud-elements.com/elements/api-v2/hubs/crm/leads',
+        json: true,
+        headers: {
+            'content-type': 'application/json',
+            'authorization': "User " + process.env.CE_USER + ", Organization " + process.env.CE_ORG + ", Element " + elementToken
+        }
+    }
+    request(options, (err, response, body) => {
+        if (err) {
+            console.log("ERROR! " + err);
+            return
+        }
+        if (!response || response.statusCode >= 399) {
+            console.log("UNHAPPINESS! " + response.statusCode);
+            console.log(body);
+        }
+        console.log(body);
+        return body;
+    });
+}
+
+const getCRMOpportunities = (elementToken) => {
+    var options = {
+        method: 'GET',
+        url: 'https://' + (process.env.CE_ENV || 'api') + '.cloud-elements.com/elements/api-v2/hubs/crm/opportunities',
+        json: true,
+        headers: {
+            'content-type': 'application/json',
+            'authorization': "User " + process.env.CE_USER + ", Organization " + process.env.CE_ORG + ", Element " + elementToken
+        }
+    }
+    request(options, (err, response, body) => {
+        if (err) {
+            console.log("ERROR! " + err);
+            return
+        }
+        if (!response || response.statusCode >= 399) {
+            console.log("UNHAPPINESS! " + response.statusCode);
+            console.log(body);
+        }
+        console.log(body);
+        return body;
+    });
+}
+
+const getCRMLeadByID = (elementToken, leadID) => {
+    var options = {
+        method: 'GET',
+        url: 'https://' + (process.env.CE_ENV || 'api') + '.cloud-elements.com/elements/api-v2/hubs/crm/leads/' + leadID,
+        json: true,
+        headers: {
+            'content-type': 'application/json',
+            'authorization': "User " + process.env.CE_USER + ", Organization " + process.env.CE_ORG + ", Element " + elementToken
+        }
+    }
+    request(options, (err, response, body) => {
+        if (err) {
+            console.log("ERROR! " + err);
+            return
+        }
+        if (!response || response.statusCode >= 399) {
+            console.log("UNHAPPINESS! " + response.statusCode);
+            console.log(body);
+        }
+        console.log(body);
+        return body;
+    });
+}
+
 module.exports = {
-    postInstanceBody: postInstanceBody
+    postInstanceBody: postInstanceBody,
+    getCRMOpportunities: getCRMOpportunities,
+    getCRMLeads: getCRMLeads,
+    getCRMLeadsByID: getCRMLeadByID
 }

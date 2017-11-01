@@ -10,7 +10,9 @@ const jsonpath = require('jsonpath');
 const { Document } = require('adf-builder');
 const prettyjson = require('prettyjson');
 const request = require('request');
+const jwt_decode = require('jwt-decode');
 const ce = require('./ce-util');
+const lukeStore = require('./luke-store');
 
 require('dotenv').config();
 
@@ -99,6 +101,92 @@ app.post('/uninstalled', (req, res) => {
     res.sendStatus(204);
 });
 
+const testLeads = {
+    "00Q1I000003BYc6UAG": {
+        "zipcode": "78701",
+        "phone": "(850) 644-4200",
+        "name": "Bertha Boxer",
+        "industry": "Agriculture",
+        "state": "FL",
+        "id": "00Q1I000003BYc6UAG",
+        "url": "https://na73.lightning.force.com/one/one.app#/sObject/00Q1I000003BYc6UAG/view",
+        "status": "Working - Contacted"
+    },
+    "00Q1I000003BYc6BBB": {
+        "zipcode": "78666",
+        "phone": "(505) 644-4200",
+        "name": "Alice Baker",
+        "industry": "Agriculture",
+        "state": "FL",
+        "id": "00Q1I000003BYc6BBB",
+        "url": "https://na73.lightning.force.com/one/one.app#/sObject/00Q1I000003BYc6UAG/view",
+        "status": "Open - New"
+    },
+}
+
+
+function myLeadCard(lead) {
+    const doc = new Document();
+
+    doc.paragraph()
+        .text('Lead ')
+        .link(lead.id, lead.url)
+        .text(' from ')
+        .link('ZIP ' + lead.zipcode, "http://www.melissadata.com/lookups/MapZipV.asp?zip=" + lead.zipcode)
+
+    const card = doc.applicationCard('Lead: ' + lead.name)
+        .link(lead.url)
+        .description('Phone: ' + lead.phone);
+
+
+    var img = process.env.APP_URL + '/img/x-mark.svg';
+    if (/Working/.exec(lead.status)) {
+        img = process.env.APP_URL + '/img/check-mark.svg';
+    }
+
+    card.detail()
+        .title('Status')
+        .text(lead.status)
+        .icon({
+            url: img,
+            label: 'Task'
+        });
+    return doc.toJSON();
+}
+
+function replyWithLead(req, res, next) {
+    const reqBody = req.body;
+
+    const document = myLeadCard(testLeads["00Q1I000003BYc6UAG"]);
+
+    stride.reply({ reqBody, document })
+        .then(() => res.sendStatus(200))
+        .catch(err => console.error('  Something went wrong', prettify_json(err)));
+}
+
+app.post('/message',
+    stride.validateJWT,
+    (req, res, next) => {
+        console.log('- bot message', prettify_json(req.body));
+        res.sendStatus(200);
+        const reqBody = req.body;
+
+        var msg = req.body.message.text;
+        var pat = /[0-9A-Za-z]{7,}/g;
+        var m;
+        while ((m = pat.exec(msg)) !== null) {
+            console.log("Checking <" + m[0] + ">");
+            var lead = testLeads[m[0]];
+            if (lead) {
+                const document = myLeadCard(lead);
+
+                stride.reply({ reqBody, document })
+                    .catch(err => console.error('  Something went wrong', prettify_json(err)));
+            }
+        }
+    })
+
+
 /**
  * chat:bot
  * --------
@@ -119,6 +207,11 @@ app.post('/bot-mention',
     stride.validateJWT,
     (req, res, next) => {
         console.log('- bot mention', prettify_json(req.body));
+
+        if (/lead/.exec(req.body.message.text)) {
+            return replyWithLead(req, res, next);
+        }
+
         const reqBody = req.body;
 
         let user; // see getAndReportUserDetails
@@ -130,7 +223,9 @@ app.post('/bot-mention',
             // Now let's do the time-consuming things:
             .then(() => showCaseHighLevelFeatures({ reqBody }))
             //.then(() => demoLowLevelFunctions({reqBody}))
-            //.then(allDone)
+            //.then(allDone)    
+            .then(() => showInstance(reqBody.conversation.id))
+            .then(r => stride.replyWithText({ reqBody, text: "Hey, my Cloud Elements instance id is: " + r }))
             .catch(err => console.error('  Something went wrong', prettify_json(err)));
 
         async function allDone() {
@@ -170,7 +265,6 @@ async function sendAPersonalizedResponse({ reqBody }) {
         return user;
     }
 
-
 }
 
 /**
@@ -206,6 +300,7 @@ app.post('/roster-updated',
 app.get('/module/config',
     stride.validateJWT,
     (req, res) => {
+        // console.log(req);
         res.redirect("/app-module-config.html");
     }
 );
@@ -295,7 +390,7 @@ app.get('/module/glance/state',
         res.send(
             JSON.stringify({
                 "label": {
-                    "value": "Click me!"
+                    "value": "CE CRM"
                 }
             }));
     }
@@ -362,11 +457,10 @@ app.get('/descriptor', (req, res) => {
 
 // handle salesforce login request by obtaining then redirecting to salesforce
 app.get('/login/salesforce', (req, res) => {
-
-    let url = 'https://api.cloud-elements.com/elements/api-v2/elements/sfdc/oauth/url?apiKey=' +
+    let url = 'https://' + (process.env.CE_ENV || 'api') + '.cloud-elements.com/elements/api-v2/elements/sfdc/oauth/url?apiKey=' +
         process.env.SFDC_KEY +
         '&apiSecret=' + process.env.SFDC_SECRET +
-        '&callbackUrl=' + process.env.APP_URL + "/auth" + '&state=sfdc';
+        '&callbackUrl=' + process.env.APP_URL + "/auth" + '&state=' + req.query.jwt;
     var options = {
         url: url,
         headers: {
@@ -399,8 +493,16 @@ app.get('/login/salesforce', (req, res) => {
 app.get('/auth', (req, res) => {
     console.log("-auth: Hi, I received an OAuth response!");
     console.log(req.body);
-    console.log(req.query);
+    console.log('queries! :' + req.query);
     let code = req.query.code;
+    let conversationId;
+    if (req.query.state) {
+        conversationId = jwt_decode(req.query.state).context.resourceId;
+        console.log(conversationId);
+    } else {
+        console.log('BROKENN :((')
+        res.send('Oh no, something went wrong! We didnt get a state from Salesforce');
+    }
 
     //
     // create SFDC Instance
@@ -408,7 +510,7 @@ app.get('/auth', (req, res) => {
     var elementInstantiation = ce.postInstanceBody("sfdc", code);
 
     var options = {
-        url: 'https://api.cloud-elements.com/elements/api-v2/instances',
+        url: 'https://' + (process.env.CE_ENV || 'api') + '.cloud-elements.com/elements/api-v2/instances',
         headers: {
             'content-type': 'application/json',
             'authorization': "User " + process.env.CE_USER + ", Organization " + process.env.CE_ORG
@@ -417,41 +519,20 @@ app.get('/auth', (req, res) => {
         body: elementInstantiation,
         json: true
     };
-    console.log("POST /instances")
+    console.log("POST /instances");
     console.log(elementInstantiation);
-    request(options, (err, response, body) => {
-        if (err) {
-            console.log("ERROR! " + err);
-            return
-        }
-        if (!response || response.statusCode >= 399) {
-            console.log("UNHAPPINESS! " + response.statusCode);
-            console.log(body);
-        }
-        // success!
+    // c
+
+    // create the instance
+    request(options, function(err, response, body) {
+        checkForErrors(err, response, body);
+
+        // success! we have an instance!
         console.log(body.name + " " + body.token);
         // let's make a SFDC request
-        var options = {
-            method: 'GET',
-            url: 'https://console.cloud-elements.com/elements/api-v2/hubs/crm/opportunities',
-            json: true,
-            headers: {
-                'content-type': 'application/json',
-                'authorization': "User " + process.env.CE_USER + ", Organization " + process.env.CE_ORG + ", Element " + body.token
-            }
-        }
-        request(options, (err, response, body) => {
-            if (err) {
-                console.log("ERROR! " + err);
-                return
-            }
-            if (!response || response.statusCode >= 399) {
-                console.log("UNHAPPINESS! " + response.statusCode);
-                console.log(body);
-            }
-            console.log(body);
-
-        });
+        console.log(ce.getCRMLeads(body.token));
+        // let's save them!
+        lukeStore.saveInstance(conversationId, body.name, body.token, body.element.key, body.id);
 
         //return res.redirect(process.env.APP_URL + "/closeme")
         return res.redirect("/thanks-close-me.html");
@@ -824,6 +905,24 @@ async function demoLowLevelFunctions({ reqBody }) {
         await stride.replyWithText({ reqBody, text: text + ' <-- converted to text!' });
     }
 }
+
+const checkForErrors = (err, response, body) => {
+    if (err) {
+        console.log("ERROR! " + err);
+        return
+    }
+    if (!response || response.statusCode >= 399) {
+        console.log("UNHAPPINESS! " + response.statusCode);
+        console.log(body);
+        return
+    }
+}
+
+const showInstance = (conversationId) => {
+    let instanceToken = lukeStore.getInstance(conversationId).token;
+    // console.log(instanceId);
+    return instanceToken;
+};
 
 
 http.createServer(app).listen(PORT, function() {

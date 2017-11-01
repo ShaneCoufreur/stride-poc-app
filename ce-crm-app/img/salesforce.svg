@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="48"
+   height="48"
+   viewBox="0 0 48 48"
+   version="1.1"
+   id="svg2"
+   inkscape:version="0.91 r13725"
+   sodipodi:docname="salesforce.svg">
+  <metadata
+     id="metadata20">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title>task</dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <sodipodi:namedview
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1"
+     objecttolerance="10"
+     gridtolerance="10"
+     guidetolerance="10"
+     inkscape:pageopacity="0"
+     inkscape:pageshadow="2"
+     inkscape:window-width="1763"
+     inkscape:window-height="904"
+     id="namedview18"
+     showgrid="false"
+     inkscape:zoom="14.620527"
+     inkscape:cx="23.683226"
+     inkscape:cy="26.039927"
+     inkscape:window-x="299"
+     inkscape:window-y="172"
+     inkscape:window-maximized="0"
+     inkscape:current-layer="svg2" />
+  <!-- Generator: Sketch 3.5.2 (25235) - http://www.bohemiancoding.com/sketch -->
+  <title
+     id="title4">task</title>
+  <desc
+     id="desc6">Created with Sketch.</desc>
+  <defs
+     id="defs8" />
+  <path
+     style="fill:#189cd8;fill-opacity:1;fill-rule:evenodd;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+     d="M 10.038752,33.587447 C 4.0681639,34.152895 3.0490181,31.745171 1.9553975,29.958231 -0.76153551,25.518851 2.935049,20.280827 4.5622024,19.250327 3.0634395,12.106932 6.9822706,9.0353979 8.3602353,8.4294049 9.1658026,8.0751379 14.745649,4.5960629 20.025798,10.756236 22.433273,8.5719769 23.79988,7.8425739 26.351951,7.9305759 c 2.552072,0.088 3.928703,0.853061 6.688189,4.4781011 7.920222,-2.9040811 12.807833,1.752557 13.29751,7.438777 0.504592,5.859428 -5.547712,12.654085 -11.361456,11.149351 -1.436337,1.504734 -3.248766,3.123532 -4.800481,3.490469 -1.777447,0.420316 -3.179003,0.185588 -4.605759,-0.762392 -0.310977,-0.206622 -3.007007,4.787632 -6.276473,5.113724 -7.15472,0.713601 -9.035958,-5.201726 -9.035958,-5.201726 z"
+     id="path4203"
+     inkscape:connector-curvature="0"
+     sodipodi:nodetypes="cscscscscssscc" />
+  <text
+     xml:space="preserve"
+     style="font-style:normal;font-weight:normal;font-size:25.8320713px;line-height:125%;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#ffffff;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+     x="7.4195967"
+     y="30.940075"
+     id="text4205"
+     sodipodi:linespacing="125%"
+     transform="scale(1.0058051,0.99422841)"><tspan
+       sodipodi:role="line"
+       id="tspan4207"
+       x="7.4195967"
+       y="30.940075">sf</tspan></text>
+</svg>

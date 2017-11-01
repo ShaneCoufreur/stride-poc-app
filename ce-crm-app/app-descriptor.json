@@ -18,13 +18,11 @@
         }
       }
     ],
-    "chat:inputAction": [
+    "chat:bot:messages": [
       {
-        "key": "cebot-input-action",
-        "name": {
-          "value": "Open App Dialog"
-        },
-        "target": "refapp-dialog"
+          "key": "cebot-msg",
+          "url": "/message",
+          "pattern": ".*[0-9A-Za-z][0-9A-Za-z][0-9A-Za-z][0-9A-Za-z][0-9A-Za-z][0-9A-Za-z][0-9A-Za-z]+.*"
       }
     ],
     "chat:dialog": [
@@ -108,10 +106,10 @@
           "value": "App Glance"
         },
         "icon": {
-          "url": "/img/logo.png",
-          "url@2x": "/img/logo.png"
+          "url": "/img/salesforce.svg",
+          "url@2x": "/img/salesforce.svg"
         },
-        "target": "refapp-sidebar",
+        "target": "cebot-sidebar",
         "queryUrl": "/module/glance/state",
         "authentication": "jwt"
       }
@@ -152,4 +150,3 @@
     ]
   }
 }
-
