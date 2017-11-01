@@ -522,6 +522,8 @@ function factory({clientId, clientSecret, env = 'development', debugId = 'stride
     }
   }
 
+
+
   /**
    * Securing your app with JWT
    * --------------------------

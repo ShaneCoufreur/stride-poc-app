@@ -2,11 +2,20 @@
 
 <!-- Sample implementation of a chat:configuration module -->
 
-<html lang="en">
+<html lang="en" ng-app="cloudelements">
 
 <head>
-    <meta charset="UTF-8">
     <title>CRM Configuration</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <meta charset="utf-8">
+     <link rel="stylesheet" href="https://ajax.googleapis.com/ajax/libs/angular_material/1.0.0/angular-material.min.css">
+      <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.8/angular.min.js"></script>
+      <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.8/angular-animate.min.js"></script>
+      <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.8/angular-aria.min.js"></script>
+      <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.8/angular-messages.min.js"></script>
+      <script src="https://ajax.googleapis.com/ajax/libs/angular_material/1.0.0/angular-material.min.js"></script>
+    <!-- <link rel="stylesheet" type="text/css" href="westernunion.css"> -->
+    <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.2.1/semantic.min.css">
 
     <!-- Import AtlasKit: https://atlaskit.atlassian.com -->
     <link rel="stylesheet" href="node_modules/@atlaskit/css-reset/dist/bundle.css" />
@@ -23,14 +32,13 @@
 
     <script>
         $(document).ready(function() {
-
             /**
              * Load configuration settings from the app backend for this conversation
              */
             AP.auth.withToken(function(err, token) {
                 $.ajax({
                     type: 'GET',
-                    url: '/module/config/content',
+                    url: '/${flavor}/module/config/content',
                     headers: {
                         'Authorization': 'Bearer ' + token
                     },
@@ -71,7 +79,7 @@
                         AP.auth.withToken(function(err, token) {
                             $.ajax({
                                 type: 'POST',
-                                url: '/module/config/content',
+                                url: '/${flavor}/module/config/content',
                                 headers: {
                                     'Authorization': 'Bearer ' + token
                                 },
@@ -99,22 +107,26 @@
 
         function connectToProvider() {
             AP.auth.withToken(function(err, token) {
-                window.open("/login/salesforce?jwt=" + token);
+                window.open("/${flavor}/login?jwt=" + token);
             });
         }
     </script>
 </head>
 
-<body>
-    <img src="https://login.salesforce.com/img/logo198.png" width="80">
+<body ng-controller="cloudelementsController">
+    <img src="/flavor/${flavor}/big.png" width="80">
     <p>
-        Please use the below link to log in to Salesforce. After you're done, please close this dialog!
+        Please use the below link to log in to ${flavorName}. After you're done, please close this dialog!
     </p>
     <div class="ak-button-group">
-        <input type="button" class="ak-button" name="connect" value="Connect to Salesforce" id="connect1" onclick="connectToProvider()">
+        <input type="button" class="ak-button" name="connect" value="Connect to ${flavorName}" id="connect1" onclick="connectToProvider()">
     </div>
 
-    
+
+
+
+
+
     <div class="ak-field-group object-label">
       <label for="object">Objects</label>
     </div>
@@ -188,8 +200,12 @@
         <span class="mapping-actions"></span>
       </li>
     -->
-      
+
     </ul>
+
+
+
+    <script src="ng-config-dialog.js"></script>
 
 </body>
 

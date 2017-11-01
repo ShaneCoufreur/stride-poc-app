@@ -1,11 +1,11 @@
-const low = require('lowdb')
-const FileSync = require('lowdb/adapters/FileSync')
+const low = require('lowdb');
+const FileSync = require('lowdb/adapters/FileSync');
 
-const adapter = new FileSync('/tmp/luke-store.json')
-const db = low(adapter)
+const adapter = new FileSync('/tmp/luke-store.json');
+const db = low(adapter);
 
 // Set some defaults
-db.defaults({ instances: [], user: {} }).write();
+db.defaults({ instances: [], formulas: [] }).write();
 // var instances = db.addCollection('instances');
 
 const saveNewInstance = (conversationId, flavor, instanceBody) => {
@@ -15,36 +15,43 @@ const saveNewInstance = (conversationId, flavor, instanceBody) => {
         name: instanceBody.name,
         elementKey: instanceBody.elementKey,
         token: instanceBody.token,
-        instanceId: instanceBody.id,
-        appFlavor: flavor,
-        formula: {
-            id: null,
-            instanceId: null,
-            objects: []
-        }
+        instanceId: instanceBody.id
     };
-    // Add a post
+    // Add an instance
     db.get('instances')
         .push(obj)
         .write();
 };
 
-const updateInstance = (conversationId, flavor, instanceBody) => {
-    // update relative instance body with formula info
-
-    db.get('instances')
-        .find({ conversationId: conversationId })
-        .value()
-        .assign({ title: 'hi!' })
+const saveFormula = (conversationId, flavor, formulaBody) => {
+    // store formulaId with roomId
+    let obj = {
+            id: null,
+            instances: [],
+            objects: []
+        }
+        // Add a formula
+    db.get('formulas')
+        .push(obj)
         .write();
 }
 
-const getInstance = (conversationId) => {
+const saveNewFormula = (conversationId, flavor, formulaInstBody) => {
+    // update relative instance body with formula info
+
+    let results = db.get('instances')
+        .find({ conversationId: conversationId, elementKey: flavor })
+        .value()
+        // .assign({ title: 'hi!' })
+        // .write();
+    return results;
+}
+
+const getInstance = (conversationId, flavor) => {
     // getPosts
     let results = db.get('instances')
-        .find({ conversationId: conversationId })
+        .find({ conversationId: conversationId, elementKey: flavor })
         .value();
-    console.log(results);
     return results;
 }
 

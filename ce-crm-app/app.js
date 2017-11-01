@@ -20,14 +20,10 @@ function prettify_json(data, options = {}) {
     return '{\n' + prettyjson.render(data, options) + '\n}';
 }
 
-const { PORT = 8000, CLIENT_ID, CLIENT_SECRET, ENV = 'production' } = process.env;
-if (!CLIENT_ID || !CLIENT_SECRET) {
-    console.log("Usage:");
-    console.log("PORT=<http port> CLIENT_ID=<app client ID> CLIENT_SECRET=<app client secret> node app.js");
-    process.exit();
-}
+const { PORT = 8000, ENV = 'production' } = process.env;
 
 const app = express();
+
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static('.'));
@@ -35,12 +31,52 @@ app.use(express.static('.'));
 /**
  * Simple library that wraps the Stride REST API
  */
-const stride = require('./stride.js').factory({
-    clientId: CLIENT_ID,
-    clientSecret: CLIENT_SECRET,
-    env: ENV,
-});
+const strideProper = require('./stride.js');
 
+var stridef = {};
+
+function addFlavor(key) {
+    const idKey = key.toUpperCase() + '_CLIENT_ID';
+    const secretKey = key.toUpperCase() + '_CLIENT_SECRET';
+
+    if (!process.env[idKey] || !process.env[secretKey]) {
+        return
+    }
+
+    console.log("ENABLED FLAVOR: " + key);
+    stridef[key] = strideProper.factory({
+        clientId: process.env[idKey],
+        clientSecret: process.env[secretKey],
+        env: ENV,
+    })
+}
+
+addFlavor('sfdc');
+addFlavor('hubspot');
+addFlavor('closeio');
+
+const flavorName = {
+    'sfdc': "Salesforce",
+    'hubspot': "HubSpot",
+    'closeio': "Close.IO",
+}
+
+if (!Object.keys(stridef)) {
+    console.log("*** NO FLAVORS ENABLED ***; supply {flavor}_CLIENT_ID and {flavor}_CLIENT_SECRET");
+    process.exit(1);
+}
+
+
+function validateJWTFlavor(req, res, next) {
+    const flavor = req.params.flavor;
+
+    if (!stridef[flavor]) {
+        console.log(`Oops, for ${req.path} flavor ${flavor} is not defined`);
+        res.sendStatus(404);
+        return
+    }
+    stridef[flavor].validateJWT(req, res, next);
+}
 
 /**
  * This implementation doesn't make any assumption in terms of data store, frameworks used, etc.
@@ -62,34 +98,39 @@ const installationStore = {};
  * At installation, Stride sends the context of the installation: cloudId, conversationId, userId
  * You can store this information for later use.
  */
-app.post('/installed', (req, res, next) => {
-    console.log('- app installed in a conversation');
-    const { cloudId, userId } = req.body;
-    const conversationId = req.body.resourceId;
+app.post('/:flavor/installed',
+    validateJWTFlavor,
+    (req, res, next) => {
+        const flavor = req.params.flavor;
+        const stride = stridef[flavor];
 
-    // Store the installation details
-    if (!installationStore[conversationId]) {
-        installationStore[conversationId] = {
-            cloudId,
-            conversationId,
-            installedBy: userId,
-        }
-        console.log('  Persisted for this conversation:', prettify_json(installationStore[conversationId]));
-    } else
-        console.log('  Known data for this conversation:', prettify_json(installationStore[conversationId]));
+        console.log('- app installed in a conversation');
+        const { cloudId, userId } = req.body;
+        const conversationId = req.body.resourceId;
+
+        // Store the installation details
+        if (!installationStore[conversationId]) {
+            installationStore[conversationId] = {
+                cloudId,
+                conversationId,
+                installedBy: userId,
+            }
+            console.log('  Persisted for this conversation:', prettify_json(installationStore[conversationId]));
+        } else
+            console.log('  Known data for this conversation:', prettify_json(installationStore[conversationId]));
 
 
-    // Send a message to the conversation to announce the app is ready
-    stride.sendTextMessage({
-            cloudId,
-            conversationId,
-            text: "Hi! I don't do anything right now.",
-        })
-        .then(() => res.sendStatus(200))
-        .catch(next);
-});
+        // Send a message to the conversation to announce the app is ready
+        stride.sendTextMessage({
+                cloudId,
+                conversationId,
+                text: "Hi! I don't do anything right now.",
+            })
+            .then(() => res.sendStatus(200))
+            .catch(next);
+    });
 
-app.post('/uninstalled', (req, res) => {
+app.post('/:flavor/uninstalled', (req, res) => {
     console.log('- app uninstalled from a conversation');
     const conversationId = req.body.resourceId;
 
@@ -103,6 +144,8 @@ app.post('/uninstalled', (req, res) => {
 
 
 function myLeadCard(lead) {
+    console.log("LEAD CARD: " + prettify_json(lead));
+
     const doc = new Document();
 
     doc.paragraph()
@@ -131,9 +174,14 @@ function myLeadCard(lead) {
     return doc.toJSON();
 }
 
-function getLead(conv, id, then) {
+function getLead(flavor, conv, id, then) {
 
-    const elem = lukeStore.getInstance(conv).token;
+    const inst = lukeStore.getInstance(conv, flavor);
+    if (!inst) {
+        return;
+    }
+
+    const elem = inst.token;
 
     var options = {
         url: 'https://' + (process.env.CE_ENV || 'api') + '.cloud-elements.com/elements/api-v2/hubs/crm/stride-crm-lead/' + id,
@@ -150,11 +198,13 @@ function getLead(conv, id, then) {
     request(options, (err, response, body) => {
         checkForErrors(err, response, body);
         console.log("Yo, got an answer: " + prettify_json(body));
-        then(body);
+        if (response.statusCode === 200) {
+            then(body);
+        }
     })
 }
 
-function replyWithLead(req, next, convo) {
+function replyWithLead(flavor, stride, req, next, convo) {
     const reqBody = req.body;
     const cloudId = req.body.cloudId;
     const conversationId = req.body.conversation.id;
@@ -165,7 +215,7 @@ function replyWithLead(req, next, convo) {
         id = match[1];
     }
 
-    getLead(convo, id, (lead) => {
+    getLead(flavor, convo, id, (lead) => {
         if (lead) {
             const document = myLeadCard(lead);
             stride.sendMessage({ cloudId, conversationId, document })
@@ -174,10 +224,13 @@ function replyWithLead(req, next, convo) {
     })
 }
 
-app.post('/message',
-    stride.validateJWT,
+app.post('/:flavor/message',
+    validateJWTFlavor,
     (req, res, next) => {
-        console.log('- bot message', prettify_json(req.body));
+        const flavor = req.params.flavor;
+        const stride = stridef[flavor];
+
+        console.log('- (' + flavor + ') bot message', prettify_json(req.body));
         res.sendStatus(200);
         const reqBody = req.body;
         const cloudId = req.body.cloudId;
@@ -188,7 +241,7 @@ app.post('/message',
         var m;
         while ((m = pat.exec(msg)) !== null) {
             console.log("Checking <" + m[0] + ">");
-            getLead(conversationId, m[0], (lead) => {
+            getLead(flavor, conversationId, m[0], (lead) => {
                 if (lead) {
                     const document = myLeadCard(lead);
 
@@ -216,14 +269,16 @@ app.post('/message',
  *
  */
 
-app.post('/bot-mention',
-    stride.validateJWT,
+app.post('/:flavor/bot-mention',
+    validateJWTFlavor,
     (req, res, next) => {
-        console.log('- bot mention', prettify_json(req.body));
+        const flavor = req.params.flavor;
+        const stride = stridef[flavor];
+        console.log('- (' + flavor + ') bot mention', prettify_json(req.body));
 
         if (/lead/.exec(req.body.message.text)) {
             res.sendStatus(200);
-            return replyWithLead(req, next, req.body.conversation.id);
+            return replyWithLead(flavor, stride, req, next, req.body.conversation.id);
         }
 
         const reqBody = req.body;
@@ -233,7 +288,7 @@ app.post('/bot-mention',
         stride.replyWithText({ reqBody, text: "Oh, hello there!" })
             // If you don't send a 200 fast enough, Stride will resend you the same mention message
             .then(() => res.sendStatus(200))
-            .then(() => sendAPersonalizedResponse({ reqBody }))
+            .then(() => sendAPersonalizedResponse({ stride, reqBody }))
             // Now let's do the time-consuming things:
             //.then(allDone)
             .then(() => showInstance(reqBody.conversation.id))
@@ -248,7 +303,7 @@ app.post('/bot-mention',
 );
 
 // sends a message with the user's nickname
-async function sendAPersonalizedResponse({ reqBody }) {
+async function sendAPersonalizedResponse({ stride, reqBody }) {
     const { cloudId } = reqBody;
     const conversationId = reqBody.conversation.id;
     const senderId = reqBody.sender.id;
@@ -286,16 +341,16 @@ async function sendAPersonalizedResponse({ reqBody }) {
  * Note: webhooks will only fire for conversations your app is authorized to access
  */
 
-app.post('/conversation-updated',
-    stride.validateJWT,
+app.post('/:flavor/conversation-updated',
+    validateJWTFlavor,
     (req, res) => {
         console.log('A conversation was changed: ' + req.body.conversation.id + ', change: ' + prettify_json(req.body.action));
         res.sendStatus(200);
     }
 );
 
-app.post('/roster-updated',
-    stride.validateJWT,
+app.post('/:flavor/roster-updated',
+    validateJWTFlavor,
     (req, res) => {
         console.log('A user joined or left a conversation: ' + req.body.conversation.id + ', change: ' + prettify_json(req.body.action));
         res.sendStatus(200);
@@ -309,19 +364,28 @@ app.post('/roster-updated',
  * TBD
  */
 
-app.get('/module/config',
-    stride.validateJWT,
+app.get('/:flavor/module/config',
+    //validateJWTFlavor,
     (req, res) => {
-        // console.log(req);
-        res.redirect("/app-module-config.html");
-    }
-);
+
+        const flavor = req.params.flavor;
+
+        fs.readFile('./app-module-config.html', (err, htmlTemplate) => {
+            const template = _.template(htmlTemplate);
+            const html = template({
+                flavor: flavor,
+                flavorName: flavorName[flavor],
+            });
+            res.set('Content-Type', 'text/html');
+            res.send(html);
+        });
+    });
 
 // Get the configuration state: is it configured or not for the conversation?
-app.get('/module/config/state',
+app.get('/:flavor/module/config/state',
     // cross domain request
     cors(),
-    stride.validateJWT,
+    validateJWTFlavor,
     (req, res) => {
         const conversationId = res.locals.context.conversationId;
         console.log("getting config state for conversation " + conversationId);
@@ -335,8 +399,8 @@ app.get('/module/config/state',
 );
 
 // Get the configuration content from the configuration dialog
-app.get('/module/config/content',
-    stride.validateJWT,
+app.get('/:flavor/module/config/content',
+    validateJWTFlavor,
     (req, res) => {
         const conversationId = res.locals.context.conversationId;
         console.log("getting config content for conversation " + conversationId);
@@ -346,11 +410,14 @@ app.get('/module/config/content',
 );
 
 // Save the configuration content from the configuration dialog
-app.post('/module/config/content',
-    stride.validateJWT,
+app.post('/:flavor/module/config/content',
+    validateJWTFlavor,
     (req, res, next) => {
         const cloudId = res.locals.context.cloudId;
         const conversationId = res.locals.context.conversationId;
+        const flavor = req.params.flavor;
+        const stride = stridef[flavor];
+
         console.log("saving config content for conversation " + conversationId + ": " + prettify_json(req.body));
         configStore[conversationId] = req.body;
         console.log("cloudId " + cloudId);
@@ -361,8 +428,8 @@ app.post('/module/config/content',
     }
 );
 
-app.get('/module/dialog',
-    stride.validateJWT,
+app.get('/:flavor/module/dialog',
+    validateJWTFlavor,
     (req, res) => {
         res.redirect("/app-module-dialog.html");
     }
@@ -394,15 +461,17 @@ app.get('/module/dialog',
  * Stride will then make sure glances are updated for all connected Stride users.
  **/
 
-app.get('/module/glance/state',
+app.get('/:flavor/module/glance/state',
     // cross domain request
     cors(),
-    stride.validateJWT,
+    validateJWTFlavor,
     (req, res) => {
+        const flavor = req.params.flavor;
+
         res.send(
             JSON.stringify({
                 "label": {
-                    "value": "CE CRM"
+                    "value": "CE " + flavorName[flavor],
                 }
             }));
     }
@@ -425,24 +494,39 @@ app.get('/module/glance/state',
  * 		]
  **/
 
-app.get('/module/sidebar',
-    stride.validateJWT,
+app.get('/:flavor/module/sidebar',
+    validateJWTFlavor,
     (req, res) => {
         res.redirect("/app-module-sidebar.html");
     }
 );
+
+app.get('/:flavor/glance.svg',
+    (req, res) => {
+        const flavor = req.params.flavor;
+        const src = `flavor/${flavor}/glance.svg`;
+
+        fs.readFile(src, (err, data) => {
+            res.set('Content-Type', 'image/svg+xml');
+            res.send(data);
+        });
+    });
+
 
 /**
  * Making a call from the app front-end to the app back-end:
  * You can find the context for the request (cloudId, conversationId) in the JWT token
  */
 
-app.post('/ui/ping',
-    stride.validateJWT,
+app.post('/:flavor/ui/ping',
+    validateJWTFlavor,
     (req, res) => {
         console.log('Received a call from the app frontend ' + prettify_json(req.body));
         const cloudId = res.locals.context.cloudId;
         const conversationId = res.locals.context.conversationId;
+        const flavor = req.params.flavor;
+        const stride = stridef[flavor];
+
         stride.sendTextMessage({ cloudId, conversationId, text: "Pong" })
             .then(() => res.send(JSON.stringify({ status: "Pong" })))
             .catch(() => res.send(JSON.stringify({ status: "Failed" })))
@@ -456,11 +540,15 @@ app.post('/ui/ping',
  * The variable ${host} is substituted based on the base URL of your app.
  */
 
-app.get('/descriptor', (req, res) => {
+app.get('/:flavor/descriptor', (req, res) => {
+
+    const flavor = req.params.flavor;
+
     fs.readFile('./app-descriptor.json', (err, descriptorTemplate) => {
         const template = _.template(descriptorTemplate);
         const descriptor = template({
-            host: 'https://' + req.headers.host
+            host: 'https://' + req.headers.host,
+            flavor: flavor,
         });
         res.set('Content-Type', 'application/json');
         res.send(descriptor);
@@ -468,11 +556,20 @@ app.get('/descriptor', (req, res) => {
 });
 
 // handle salesforce login request by obtaining then redirecting to salesforce
-app.get('/login/salesforce', (req, res) => {
-    let url = 'https://' + (process.env.CE_ENV || 'api') + '.cloud-elements.com/elements/api-v2/elements/sfdc/oauth/url?apiKey=' +
-        process.env.SFDC_KEY +
-        '&apiSecret=' + process.env.SFDC_SECRET +
-        '&callbackUrl=' + process.env.APP_URL + "/auth" + '&state=' + req.query.jwt;
+
+app.get('/:flavor/login', (req, res) => {
+
+    const flavor = req.params.flavor;
+    const providerKeyId = flavor.toUpperCase() + "_KEY";
+    const providerSecretId = flavor.toUpperCase() + "_SECRET";
+
+    const providerKey = process.env[providerKeyId];
+    const providerSecret = process.env[providerSecretId];
+
+    let url = 'https://' + (process.env.CE_ENV || 'api') + '.cloud-elements.com/elements/api-v2/elements/' + flavor + '/oauth/url?apiKey=' +
+        providerKey +
+        '&apiSecret=' + providerSecret +
+        '&callbackUrl=' + process.env.APP_URL + "/" + req.params.flavor + "/auth" + '&state=' + req.query.jwt;
     var options = {
         url: url,
         headers: {
@@ -502,7 +599,8 @@ app.get('/login/salesforce', (req, res) => {
 
 
 // OAuth2 receiver
-app.get('/auth', (req, res) => {
+app.get('/:flavor/auth', (req, res) => {
+    let flavor = req.params.flavor;
     console.log("-auth: Hi, I received an OAuth response!");
     console.log(req.body);
     console.log('queries! :' + req.query);
@@ -519,7 +617,7 @@ app.get('/auth', (req, res) => {
     //
     // create SFDC Instance
     //
-    var elementInstantiation = ce.postInstanceBody("sfdc", code);
+    var elementInstantiation = ce.postInstanceBody(flavor, code);
 
     var options = {
         url: 'https://' + (process.env.CE_ENV || 'api') + '.cloud-elements.com/elements/api-v2/instances',
@@ -544,6 +642,7 @@ app.get('/auth', (req, res) => {
         // let's make a SFDC request
         console.log(ce.getCRMLeads(body.token));
         // let's save them!
+
         let instanceBody = {
             name: body.name,
             token: body.token,
@@ -551,6 +650,7 @@ app.get('/auth', (req, res) => {
             id: body.id
         }
         lukeStore.createInstance(conversationId, flavor, instanceBody);
+        console.log(ce.createFormula());
 
         //return res.redirect(process.env.APP_URL + "/closeme")
         return res.redirect("/thanks-close-me.html");
