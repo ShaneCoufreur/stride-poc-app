@@ -33,6 +33,17 @@ const testSaveFormula = (conversationId, flavor, formulaId) => {
     console.log(formula);
 }
 
+const testGetFormula = () => {
+    console.log();
+    console.log();
+    console.log(" ----- testing saveFormula() function for lukeStore --------");
+    let formula = lukeStore.getFormula();
+    console.log();
+    console.log('Results from lukeStore: ');
+    console.log();
+    console.log(formula);
+}
+
 const testSaveFormulaInstance = (conversationId, flavor, formulaInstBody) => {
     console.log();
     console.log();
@@ -84,3 +95,5 @@ let flavor = "sfdc";
 // testSaveFormulaInstance(conversationId, flavor, {
 //     id: "abc-fake-FormulaId-12345"
 // })
+
+// testGetFormula();

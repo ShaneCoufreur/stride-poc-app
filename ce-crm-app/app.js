@@ -65,9 +65,10 @@ const flavorName = {
 const flavorRegex = {
     'sfdc': "[0-9A-Za-z][0-9A-Za-z][0-9A-Za-z][0-9A-Za-z][0-9A-Za-z][0-9A-Za-z][0-9A-Za-z]+",
     'hubspotcrm': "https://app.hubspot.com/contacts",
+    'closeio': "https://[a-z0-9.]*close.io/",
 }
 
-if (!Object.keys(stridef)) {
+if (Object.keys(stridef).length === 0) {
     console.log("*** NO FLAVORS ENABLED ***; supply {flavor}_CLIENT_ID and {flavor}_CLIENT_SECRET");
     process.exit(1);
 }
@@ -105,7 +106,7 @@ const installationStore = {};
  * You can store this information for later use.
  */
 app.post('/:flavor/installed',
-    validateJWTFlavor,
+         //validateJWTFlavor,  // TODO, JWT isn't standard form
     (req, res, next) => {
         const flavor = req.params.flavor;
         const stride = stridef[flavor];
@@ -136,7 +137,9 @@ app.post('/:flavor/installed',
             .catch(next);
     });
 
-app.post('/:flavor/uninstalled', (req, res) => {
+app.post('/:flavor/uninstalled',
+         //validateJWTFlavor,  // TODO, JWT isn't standard form
+         (req, res) => {
     console.log('- app uninstalled from a conversation');
     const conversationId = req.body.resourceId;
 
@@ -736,7 +739,7 @@ app.post(':flavor/ce-callback', (req, res) => {
 // lukeStore.saveFormulaInstance(conversationId, flavor, formulaInstanceBody);
 // only required field of `formulaInstanceBody` is `id`
 
-// -- update formulaInstance in Room/Instance
+// -- update formulaInstance in Room/Instance - DONE
 // lukeStore.updateFormulaInstance(conversationId, flavor, formulaInstanceBody);
 
 

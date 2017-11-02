@@ -16,12 +16,25 @@ const postInstanceBody = (elementKey, code) => {
                 "configuration": {
                     "oauth.callback.url": process.env.APP_URL + "/" + elementKey + "/auth",
                     "oauth.api.key": process.env.SFDC_KEY,
-                    "oauth.api.secret": process.env.SFDC_SECRET
+                    "oauth.api.secret": process.env.SFDC_SECRET,
+                    "event.notification.enabled": true,
+                    "event.vendor.type": "polling",
+                    // TODO: set polling interval
+                    // TODO: set objects to poll
+                    //
+                    // possibly something like this: (from danielle)
+                    //
+                    // "event.poller.refresh_interval": "1",
+                    //"event.objects": "Account",
+                    //"event.helper.key": "sfdcPolling",
+                    //"event.notification.enabled": "true",
+                    //"event.poller.urls": "Account|/hubs/crm/Account?where=LastModifiedDate>='${date}'&orderBy=Id&includeDeleted=true||LastModifiedDate|yyyy-MM-dd'T'HH:mm:ss.SSSZ",
+                    //"event.vendor.type": "polling",
                 },
                 "tags": [
                     "stride"
                 ],
-                "name": "STRIDE_TEST_" + (new Date()).getTime()
+                "name": "STRIDE_SFDC_" + (new Date()).getTime()
             };
             break;
 
@@ -39,7 +52,9 @@ const postInstanceBody = (elementKey, code) => {
                     "oauth.api.key": process.env.HUBSPOTCRM_KEY,
                     "oauth.api.secret": process.env.HUBSPOTCRM_SECRET,
                     "create.bulk.properties": "false",
-                    "filter.response.nulls": true
+                    "filter.response.nulls": true,
+                    "event.notification.enabled": true,
+                    "event.vendor.type": "webhook",
                 },
                 "tags": [
                     "stride"
@@ -47,7 +62,26 @@ const postInstanceBody = (elementKey, code) => {
                 "name": "STRIDE_HS_" + (new Date()).getTime()
             };
             break;
-        default:
+
+    case "closeio":
+            postInstanceBody = {
+                "element": {
+                    "key": "closeio"
+                },
+                "configuration": {
+                    "event.notification.enabled": true,
+                    "event.vendor.type": "webhook",
+                    "filter.response.nulls": "true",
+                    "username": process.env.CLOSEIO_API_KEY,
+                },
+                "tags": [
+                    "stride"
+                ],
+                "name": "STRIDE_CLOSEIO_" + (new Date()).getTime()
+            };
+            break;
+
+    default:
             break;
     }
     return postInstanceBody;

@@ -46,6 +46,13 @@ const saveFormula = (formulaId, conversationId, flavor) => {
     return formula;
 }
 
+const getFormula = (conversationId, flavor) => {
+    let formula = db.get('formula')
+        // .find({ conversationId: conversationId, elementKey: flavor })
+        .value();
+    return formula;
+}
+
 const saveFormulaInstance = (conversationId, flavor, formulaInstBody) => {
     // update relative instance body with formula info
     let instance = db.get('instances')
@@ -85,8 +92,8 @@ module.exports = {
     saveInstance: saveNewInstance,
     getInstance: getInstance,
     saveFormula: saveFormula,
+    getFormula: getFormula,
     saveFormulaInstance: saveFormulaInstance,
     updateFormulaInstance: updateFormulaInstance,
-    getFormulaInstance,
-    getFormulaInstance
+    getFormulaInstance: getFormulaInstance
 };
