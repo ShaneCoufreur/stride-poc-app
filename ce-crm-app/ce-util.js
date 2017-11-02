@@ -25,6 +25,28 @@ const postInstanceBody = (elementKey, code) => {
             };
             break;
 
+    case "hubspotcrm":
+            postInstanceBody = {
+                "element": {
+                    "key": "hubspotcrm"
+                },
+                "providerData": {
+                    "code": code
+                },
+                "configuration": {
+                    "authentication.type": "oauth2",
+                    "oauth.callback.url": process.env.APP_URL + "/hubspotcrm/auth",
+                    "oauth.api.key": process.env.HUBSPOTCRM_KEY,
+                    "oauth.api.secret": process.env.HUBSPOTCRM_SECRET,
+                    "create.bulk.properties": "false",
+                    "filter.response.nulls": true
+                },
+                "tags": [
+                    "stride"
+                ],
+                "name": "STRIDE_HS_" + (new Date()).getTime()
+            };
+            break;
         default:
             break;
     }
@@ -226,12 +248,100 @@ const createFormula = () => {
 }
 
 
+//const createFormulaInstance = (formulaId, instanceId) => {
+const createFormulaInstance = () => {
+
+ var formulaInstanceBody = {
+    "formula": {
+      "id": "4616",
+      "name": "strideFormula",
+      "active": true,
+      "singleThreaded": false,
+      "configuration": [
+        {
+          "id": 14454,
+          "key": "create",
+          "name": "create",
+          "type": "value",
+          "required": true
+        },
+        {
+          "id": 14455,
+          "key": "object",
+          "name": "object",
+          "type": "value",
+          "required": true
+        },
+        {
+          "id": 14456,
+          "key": "source",
+          "name": "source",
+          "type": "elementInstance",
+          "required": true
+        },
+        {
+          "id": 14457,
+          "key": "update",
+          "name": "update",
+          "type": "value",
+          "required": true
+        },
+        {
+          "id": 14458,
+          "key": "url",
+          "name": "url",
+          "type": "value",
+          "required": true
+        }
+      ]
+    },
+    "name": "stridformulainstance",
+    "settings": {},
+    "active": true,
+    "configuration": {
+      "create": "true",
+      "update": "true",
+      "source": "451899",
+      "url": process.env.APP_URL+'/cecallback',
+      "object": "leads"
+    }
+  };
+    var options = {
+        method: 'POST',
+        url: 'https://' + (process.env.CE_ENV || 'api') + '.cloud-elements.com/elements/api-v2/formulas/'+4616+'/instances',
+        json: true,
+        headers: {
+            'content-type': 'application/json',
+            'authorization': "User " + process.env.CE_USER + ", Organization " + process.env.CE_ORG
+        },
+        body: formulaInstanceBody
+    }
+    request(options, (err, response, body) => {
+        if (err) {
+            console.log("ERROR! " + err);
+            return
+        }
+        if (!response || response.statusCode >= 399) {
+            console.log("UNHAPPINESS! " + response.statusCode);
+            console.log(body);
+        }
+        console.log(body);
+        return body;
+    });
+}
+
+
+
+
+
 
 module.exports = {
     postInstanceBody: postInstanceBody,
     getCRMOpportunities: getCRMOpportunities,
     getCRMLeads: getCRMLeads,
     getCRMLeadsByID: getCRMLeadByID,
-    createFormula: createFormula
+    createFormula: createFormula,
+    createFormulaInstance: createFormulaInstance
+
 
 }

@@ -13,6 +13,7 @@ const request = require('request');
 const jwt_decode = require('jwt-decode');
 const ce = require('./ce-util');
 const lukeStore = require('./luke-store');
+const unfurl = require('./unfurl');
 
 require('dotenv').config();
 
@@ -52,13 +53,18 @@ function addFlavor(key) {
 }
 
 addFlavor('sfdc');
-addFlavor('hubspot');
+addFlavor('hubspotcrm');
 addFlavor('closeio');
 
 const flavorName = {
     'sfdc': "Salesforce",
-    'hubspot': "HubSpot",
+    'hubspotcrm': "HubSpot CRM",
     'closeio': "Close.IO",
+}
+
+const flavorRegex = {
+    'sfdc': "[0-9A-Za-z][0-9A-Za-z][0-9A-Za-z][0-9A-Za-z][0-9A-Za-z][0-9A-Za-z][0-9A-Za-z]+",
+    'hubspotcrm': "https://app.hubspot.com/contacts",
 }
 
 if (!Object.keys(stridef)) {
@@ -236,20 +242,21 @@ app.post('/:flavor/message',
         const cloudId = req.body.cloudId;
         const conversationId = req.body.conversation.id;
 
-        var msg = req.body.message.text;
-        var pat = /[0-9A-Za-z]{7,}/g;
-        var m;
-        while ((m = pat.exec(msg)) !== null) {
-            console.log("Checking <" + m[0] + ">");
-            getLead(flavor, conversationId, m[0], (lead) => {
-                if (lead) {
-                    const document = myLeadCard(lead);
+        const find = unfurl[flavor];
+        const candidates = find(req.body.message.text);
+        candidates.forEach((c) => {
+            console.log("Checking " + JSON.stringify(c));
 
-                    stride.sendMessage({ cloudId, conversationId, document })
-                        .catch(err => console.error('  Something went wrong', prettify_json(err)));
-                }
-            })
-        }
+            if (c.type === "lead") {
+                getLead(flavor, conversationId, c.id, (lead) => {
+                    if (lead) {
+                        const document = myLeadCard(lead);
+                        stride.sendMessage({ cloudId, conversationId, document })
+                            .catch(err => console.error('  Something went wrong', prettify_json(err)));
+                    }
+                })
+            }
+        });
     })
 
 
@@ -549,6 +556,7 @@ app.get('/:flavor/descriptor', (req, res) => {
         const descriptor = template({
             host: 'https://' + req.headers.host,
             flavor: flavor,
+            flavorRegex: flavorRegex[flavor],
         });
         res.set('Content-Type', 'application/json');
         res.send(descriptor);
@@ -557,19 +565,21 @@ app.get('/:flavor/descriptor', (req, res) => {
 
 // handle salesforce login request by obtaining then redirecting to salesforce
 
-app.get('/:flavor/login', (req, res) => {
+app.get('/sfdc/login', (req, res) => {
 
-    const flavor = req.params.flavor;
+    const flavor = 'sfdc';
     const providerKeyId = flavor.toUpperCase() + "_KEY";
     const providerSecretId = flavor.toUpperCase() + "_SECRET";
 
     const providerKey = process.env[providerKeyId];
     const providerSecret = process.env[providerSecretId];
 
+    // TODO: hubspotcrm login: curl -X GET "/elements/{keyOrId}/oauth/url?apiKey=<api_key>&apiSecret=<api_secret>&callbackUrl=<url>&siteAddress=<url>"
+
     let url = 'https://' + (process.env.CE_ENV || 'api') + '.cloud-elements.com/elements/api-v2/elements/' + flavor + '/oauth/url?apiKey=' +
         providerKey +
         '&apiSecret=' + providerSecret +
-        '&callbackUrl=' + process.env.APP_URL + "/" + req.params.flavor + "/auth" + '&state=' + req.query.jwt;
+        '&callbackUrl=' + process.env.APP_URL + "/" + flavor + "/auth" + '&state=' + req.query.jwt;
     var options = {
         url: url,
         headers: {
@@ -592,7 +602,53 @@ app.get('/:flavor/login', (req, res) => {
         // success!
         console.log(body.oauthUrl);
         return res.redirect(body.oauthUrl);
+    });
 
+});
+
+// Hand hubspotcrm login...  there's an extra dance
+
+app.get('/hubspotcrm/login', (req, res) => {
+
+    const flavor = 'hubspotcrm';
+    const providerKey = process.env['HUBSPOTCRM_KEY'];
+    const providerSecret = process.env['HUBSPOTCRM_SECRET'];
+
+
+    //https://staging.cloud-elements.com/elements/api-v2/elements/hubspotcrm/oauth/url?apiKey=6c46ef8c-3d65-4a2b-b917-2558e26ccf64&apiSecret=e64f6bd9-cb2f-40d0-8f96-379a06e8d5b5&callbackUrl=https://www.getpostman.com/oauth2/callback
+
+    const ce_base = 'https://' + (process.env.CE_ENV || 'api') + '.cloud-elements.com';
+
+    let url = ce_base + '/elements/api-v2/elements/' + flavor + '/oauth/url?apiKey=' +
+        providerKey +
+        '&apiSecret=' + providerSecret +
+        '&callbackUrl=' + process.env.APP_URL + "/" + flavor + "/auth" +
+        '&state=' + req.query.jwt;
+
+    var options = {
+        url: url,
+        headers: {
+            'content-type': 'application/json',
+            'authorization': "User " + process.env.CE_USER + ", Organization " + process.env.CE_ORG
+        },
+        method: 'GET',
+        json: true
+    };
+    console.log("CALLING " + JSON.stringify(options));
+
+    request(options, (err, response, body) => {
+        if (err) {
+            console.log("ERROR! " + err);
+            return
+        }
+        if (!response || response.statusCode >= 399) {
+            console.log("UNHAPPINESS! " + response.statusCode);
+            console.log(body);
+            return
+        }
+        // success!
+        console.log(body.oauthUrl);
+        return res.redirect(body.oauthUrl);
     });
 
 });
@@ -603,7 +659,7 @@ app.get('/:flavor/auth', (req, res) => {
     let flavor = req.params.flavor;
     console.log("-auth: Hi, I received an OAuth response!");
     console.log(req.body);
-    console.log('queries! :' + req.query);
+    console.log('queries! :' + JSON.stringify(req.query));
     let code = req.query.code;
     let conversationId;
     if (req.query.state) {
@@ -642,20 +698,46 @@ app.get('/:flavor/auth', (req, res) => {
         // let's make a SFDC request
         console.log(ce.getCRMLeads(body.token));
         // let's save them!
-
         let instanceBody = {
             name: body.name,
             token: body.token,
             elementKey: body.element.key,
             id: body.id
         }
-        lukeStore.createInstance(conversationId, flavor, instanceBody);
+        lukeStore.saveInstance(conversationId, flavor, instanceBody);
         console.log(ce.createFormula());
+        console.log(ce.createFormulaInstance());
 
         //return res.redirect(process.env.APP_URL + "/closeme")
         return res.redirect("/thanks-close-me.html");
     });
 });
+
+// Event reciever from Cloud Elements
+app.post(':flavor/ce-callback', (req, res) => {
+    // lookup conversationId from instanceId on event obj
+    let instanceId = req.body.instance;
+
+});
+
+
+// NOTE: db methods reference for Danielle
+
+// -- save elementInstance - DONE
+// lukeStore.saveInstance(conversationId, flavor, instanceBody);
+
+// -- get elementInstance - DONE
+// lukeStore.getInstance(conversationId, flavor);
+
+// -- save FormulaId - DONE
+// lukeStore.saveFormula(formulaId, [conversationId, flavor]);
+
+// -- save formulaInstance to Room/Instance - DONE
+// lukeStore.saveFormulaInstance(conversationId, flavor, formulaInstanceBody);
+// only required field of `formulaInstanceBody` is `id`
+
+// -- update formulaInstance in Room/Instance
+// lukeStore.updateFormulaInstance(conversationId, flavor, formulaInstanceBody);
 
 
 app.use(function errorHandler(err, req, res, next) {

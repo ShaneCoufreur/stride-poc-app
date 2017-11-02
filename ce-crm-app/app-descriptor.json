@@ -22,7 +22,7 @@
       {
           "key": "cebot-msg",
           "url": "/${flavor}/message",
-          "pattern": ".*[0-9A-Za-z][0-9A-Za-z][0-9A-Za-z][0-9A-Za-z][0-9A-Za-z][0-9A-Za-z][0-9A-Za-z]+.*"
+          "pattern": ".*${flavorRegex}.*"
       }
     ],
     "chat:dialog": [

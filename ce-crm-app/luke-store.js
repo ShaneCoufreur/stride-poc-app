@@ -5,7 +5,7 @@ const adapter = new FileSync('/tmp/luke-store.json');
 const db = low(adapter);
 
 // Set some defaults
-db.defaults({ instances: [], formulas: [] }).write();
+db.defaults({ instances: [], formulaInstances: [], formula: {} }).write();
 // var instances = db.addCollection('instances');
 
 const saveNewInstance = (conversationId, flavor, instanceBody) => {
@@ -20,32 +20,14 @@ const saveNewInstance = (conversationId, flavor, instanceBody) => {
     // Add an instance
     db.get('instances')
         .push(obj)
+        .last()
         .write();
-};
-
-const saveFormula = (conversationId, flavor, formulaBody) => {
-    // store formulaId with roomId
-    let obj = {
-            id: null,
-            instances: [],
-            objects: []
-        }
-        // Add a formula
-    db.get('formulas')
-        .push(obj)
-        .write();
-}
-
-const saveNewFormula = (conversationId, flavor, formulaInstBody) => {
-    // update relative instance body with formula info
-
-    let results = db.get('instances')
+    // return the instance that was just created
+    let newInstance = db.get('instances')
         .find({ conversationId: conversationId, elementKey: flavor })
-        .value()
-        // .assign({ title: 'hi!' })
-        // .write();
-    return results;
-}
+        .value();
+    return newInstance;
+};
 
 const getInstance = (conversationId, flavor) => {
     // getPosts
@@ -55,7 +37,56 @@ const getInstance = (conversationId, flavor) => {
     return results;
 }
 
+const saveFormula = (formulaId, conversationId, flavor) => {
+    // should we store formulaId with roomId?
+    // Add a formula
+    db.set('formula.id', formulaId).write();
+    // return formula with new ID
+    let formula = db.get('formula.id').value();
+    return formula;
+}
+
+const saveFormulaInstance = (conversationId, flavor, formulaInstBody) => {
+    // update relative instance body with formula info
+    let instance = db.get('instances')
+        .find({ conversationId: conversationId, elementKey: flavor })
+        .value();
+    // build formulaInstance obj
+    let obj = {
+        elemInstanceId: instance.instanceId,
+        conversationId: conversationId,
+        elementKey: flavor,
+        fxInstanceId: formulaInstBody.id
+    }
+    let results = db.get('formulaInstances')
+        .push(obj)
+        .write();
+    return results;
+}
+
+const getFormulaInstance = (conversationId, flavor) => {
+    let instance = db.get('formulaInstances')
+        .find({ conversationId: conversationId, elementKey: flavor })
+        .value();
+    return instance;
+}
+
+const updateFormulaInstance = (conversationId, flavor, formulaInstBody) => {
+    let instance = db.get('formulaInstances')
+        .find({ conversationId: conversationId, elementKey: flavor })
+        .assign({ fxInstanceId: formulaInstBody.id })
+        .write();
+    return instance;
+}
+
+
+
 module.exports = {
-    createInstance: saveNewInstance,
-    getInstance: getInstance
+    saveInstance: saveNewInstance,
+    getInstance: getInstance,
+    saveFormula: saveFormula,
+    saveFormulaInstance: saveFormulaInstance,
+    updateFormulaInstance: updateFormulaInstance,
+    getFormulaInstance,
+    getFormulaInstance
 };
