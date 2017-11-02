@@ -9944,3 +9944,11 @@ body[data-service="hipchat"] {
     border-bottom: 2px solid #dfe1e6;
     width: 550px;
 }
+
+.auth-good {
+    color: green;
+}
+
+.auth-bad {
+    color: red;
+}

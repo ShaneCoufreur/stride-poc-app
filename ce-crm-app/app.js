@@ -64,8 +64,8 @@ const flavorName = {
 
 const flavorRegex = {
     'sfdc': "[0-9A-Za-z][0-9A-Za-z][0-9A-Za-z][0-9A-Za-z][0-9A-Za-z][0-9A-Za-z][0-9A-Za-z]+",
-    'hubspotcrm': "https://app.hubspot.com/contacts",
-    'closeio': "https://[a-z0-9.]*close.io/",
+    'hubspotcrm': "https://app[.]hubspot[.]com/contacts",
+    'closeio': "https://app[.]close[.]io/",
 }
 
 if (Object.keys(stridef).length === 0) {
@@ -106,7 +106,7 @@ const installationStore = {};
  * You can store this information for later use.
  */
 app.post('/:flavor/installed',
-         //validateJWTFlavor,  // TODO, JWT isn't standard form
+    //validateJWTFlavor,  // TODO, JWT isn't standard form
     (req, res, next) => {
         const flavor = req.params.flavor;
         const stride = stridef[flavor];
@@ -138,18 +138,18 @@ app.post('/:flavor/installed',
     });
 
 app.post('/:flavor/uninstalled',
-         //validateJWTFlavor,  // TODO, JWT isn't standard form
-         (req, res) => {
-    console.log('- app uninstalled from a conversation');
-    const conversationId = req.body.resourceId;
+    //validateJWTFlavor,  // TODO, JWT isn't standard form
+    (req, res) => {
+        console.log('- app uninstalled from a conversation');
+        const conversationId = req.body.resourceId;
 
-    // note: we can't send message in the room anymore
+        // note: we can't send message in the room anymore
 
-    // Remove the installation details
-    installationStore[conversationId] = null;
+        // Remove the installation details
+        installationStore[conversationId] = null;
 
-    res.sendStatus(204);
-});
+        res.sendStatus(204);
+    });
 
 
 function myLeadCard(lead) {
@@ -183,7 +183,7 @@ function myLeadCard(lead) {
     return doc.toJSON();
 }
 
-function getLead(flavor, conv, id, then) {
+function getObject(flavor, conv, schema, id, then) {
 
     const inst = lukeStore.getInstance(conv, flavor);
     if (!inst) {
@@ -193,7 +193,7 @@ function getLead(flavor, conv, id, then) {
     const elem = inst.token;
 
     var options = {
-        url: 'https://' + (process.env.CE_ENV || 'api') + '.cloud-elements.com/elements/api-v2/hubs/crm/stride-crm-lead/' + id,
+        url: 'https://' + (process.env.CE_ENV || 'api') + '.cloud-elements.com/elements/api-v2/hubs/crm/' + schema + '/' + id,
         headers: {
             'authorization': "User " + process.env.CE_USER + ", Organization " + process.env.CE_ORG + ", Element " + elem,
             'accept': "application/json",
@@ -205,7 +205,9 @@ function getLead(flavor, conv, id, then) {
     console.log("Calling with options: " + prettify_json(options));
 
     request(options, (err, response, body) => {
-        checkForErrors(err, response, body);
+        if (checkForErrors(err, response, body)) {
+            return;
+        }
         console.log("Yo, got an answer: " + prettify_json(body));
         if (response.statusCode === 200) {
             then(body);
@@ -224,7 +226,7 @@ function replyWithLead(flavor, stride, req, next, convo) {
         id = match[1];
     }
 
-    getLead(flavor, convo, id, (lead) => {
+    getObject(flavor, convo, 'stride-crm-lead', id, (lead) => {
         if (lead) {
             const document = myLeadCard(lead);
             stride.sendMessage({ cloudId, conversationId, document })
@@ -250,8 +252,18 @@ app.post('/:flavor/message',
         candidates.forEach((c) => {
             console.log("Checking " + JSON.stringify(c));
 
-            if (c.type === "lead") {
-                getLead(flavor, conversationId, c.id, (lead) => {
+            switch (c.type) {
+            case "account":
+                stride.sendTextMessage({cloudId, conversationId, text: "what about account " + c.id + "?"})
+                // TODO stride-crm-account
+                getObject(flavor, conversationId, 'accounts', c.id, (obj) => {
+                    if (obj) {
+                        console.log("Yo " + prettify_json(obj))
+                    }
+                })
+
+            case "lead":
+                getObject(flavor, conversationId, 'stride-crm-lead', c.id, (lead) => {
                     if (lead) {
                         const document = myLeadCard(lead);
                         stride.sendMessage({ cloudId, conversationId, document })
@@ -410,6 +422,7 @@ app.get('/:flavor/module/config/state',
 
 // Get the configuration content from the configuration dialog
 app.get('/:flavor/module/config/content',
+    cors(),
     validateJWTFlavor,
     (req, res) => {
         const conversationId = res.locals.context.conversationId;
@@ -660,17 +673,19 @@ app.get('/hubspotcrm/login', (req, res) => {
 // OAuth2 receiver
 app.get('/:flavor/auth', (req, res) => {
     let flavor = req.params.flavor;
-    console.log("-auth: Hi, I received an OAuth response!");
+    console.log("-auth: Hi, I received an " + flavor + " OAuth response!");
     console.log(req.body);
-    console.log('queries! :' + JSON.stringify(req.query));
+    console.log('queries: ' + JSON.stringify(req.query));
     let code = req.query.code;
     let conversationId;
+
     if (req.query.state) {
         conversationId = jwt_decode(req.query.state).context.resourceId;
         console.log(conversationId);
     } else {
         console.log('BROKENN :((')
-        res.send('Oh no, something went wrong! We didnt get a state from Salesforce');
+        res.send('Oh no, something went wrong! We didnt get a state from ' + flavor);
+        return
     }
 
     //
@@ -694,12 +709,18 @@ app.get('/:flavor/auth', (req, res) => {
 
     // create the instance
     request(options, function(err, response, body) {
-        checkForErrors(err, response, body);
+        if (checkForErrors(err, response, body)) {
+            // in the OAuth case, we won't even get here unless its valid,
+            // but in the APIKey case (close.io) we don't find out that the
+            // key is invalid until we get an error here
+            res.sendStatus(401);
+            return;
+        }
 
         // success! we have an instance!
         console.log(body.name + " " + body.token);
         // let's make a SFDC request
-        console.log(ce.getCRMLeads(body.token));
+        // console.log(ce.getCRMLeads(body.token));
         // let's save them!
         let instanceBody = {
             name: body.name,
@@ -708,19 +729,61 @@ app.get('/:flavor/auth', (req, res) => {
             id: body.id
         }
         lukeStore.saveInstance(conversationId, flavor, instanceBody);
-        console.log(ce.createFormula());
-        console.log(ce.createFormulaInstance());
+        var formulaIdObj = lukeStore.checkIfFormula();
+        console.log("formulaIdObj", formulaIdObj);
+        if (!formulaIdObj.id) {
+            ce.createFormula(conversationId, flavor);
+            //create instance
+         }
+         else{
+             ce.createFormulaInstance(formulaIdObj.id, instanceBody.id)
+         }
 
         //return res.redirect(process.env.APP_URL + "/closeme")
-        return res.redirect("/thanks-close-me.html");
+        if (flavor === 'closeio') {
+            return res.sendStatus(200);
+        } else {
+            return res.redirect("/thanks-close-me.html");
+        }
     });
 });
 
 // Event reciever from Cloud Elements
-app.post(':flavor/ce-callback', (req, res) => {
+app.post('/:flavor/ce-callback', (req, res) => {
+    let flavor = req.params.flavor;
+    console.log("event received!");
+    const stride = stridef[flavor];
+    const cloudId = "911f7ab6-0583-4083-bed7-bad889ec4c92";
     // lookup conversationId from instanceId on event obj
-    let instanceId = req.body.instance;
-
+    let conversationId = lukeStore.getConversation(req.body.instanceId, flavor).conversationId;
+    // res.json({
+    //     conversation: conversationId,
+    //     eventObj: req.body
+    // });
+    // getLead(flavor, convo, req.body.id, (lead) => {
+    //     if (lead) {
+    //         const document = myLeadCard(lead);
+    //         stride.sendMessage({ cloudId, conversationId, document })
+    //             .catch(err => console.error('  Something went wrong', prettify_json(err)));
+    //     }
+    // })
+    stride.sendMessage({
+            cloudId,
+            conversationId,
+            document: {
+                version: 1,
+                type: "doc",
+                content: [{
+                    type: "paragraph",
+                    content: [{
+                        type: "text",
+                        text: "New lead from [Salesforce]: " + JSON.stringify(req.body) + " !"
+                    }]
+                }]
+            }
+        })
+        .then(() => res.sendStatus(200))
+        .catch(err => console.error('  Something went wrong', prettify_json(err)));
 });
 
 
@@ -754,14 +817,16 @@ app.use(function errorHandler(err, req, res, next) {
 const checkForErrors = (err, response, body) => {
     if (err) {
         console.log("ERROR! " + err);
-        return
+        return true;
     }
     if (!response || response.statusCode >= 399) {
         console.log("UNHAPPINESS! " + response.statusCode);
         console.log(body);
-        return
+        return true;
     }
+    return false;
 }
+
 
 const showInstance = (conversationId) => {
     let instanceToken = lukeStore.getInstance(conversationId).token;

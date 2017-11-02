@@ -30,11 +30,23 @@ const saveNewInstance = (conversationId, flavor, instanceBody) => {
 };
 
 const getInstance = (conversationId, flavor) => {
-    // getPosts
+    // get instances via conversationId
     let results = db.get('instances')
         .find({ conversationId: conversationId, elementKey: flavor })
         .value();
     return results;
+}
+
+const getConversation = (instanceId, flavor) => {
+    // get instances via instanceId
+    let results = db.get('instances')
+        .find({ instanceId: instanceId, elementKey: flavor })
+        .value();
+    return results;
+}
+const checkIfFormula = () => {
+    let formula = db.get('formula').value();
+    return formula;
 }
 
 const saveFormula = (formulaId, conversationId, flavor) => {
@@ -91,9 +103,11 @@ const updateFormulaInstance = (conversationId, flavor, formulaInstBody) => {
 module.exports = {
     saveInstance: saveNewInstance,
     getInstance: getInstance,
+    getConversation: getConversation,
     saveFormula: saveFormula,
     getFormula: getFormula,
     saveFormulaInstance: saveFormulaInstance,
     updateFormulaInstance: updateFormulaInstance,
-    getFormulaInstance: getFormulaInstance
+    getFormulaInstance: getFormulaInstance,
+    checkIfFormula: checkIfFormula
 };

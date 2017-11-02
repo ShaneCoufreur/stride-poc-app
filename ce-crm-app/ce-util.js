@@ -1,5 +1,6 @@
 require('dotenv').config();
 const request = require('request');
+const lukeStore = require('./luke-store');
 
 const postInstanceBody = (elementKey, code) => {
     let postInstanceBody = {};
@@ -72,7 +73,7 @@ const postInstanceBody = (elementKey, code) => {
                     "event.notification.enabled": true,
                     "event.vendor.type": "webhook",
                     "filter.response.nulls": "true",
-                    "username": process.env.CLOSEIO_API_KEY,
+                    "username": code,
                 },
                 "tags": [
                     "stride"
@@ -160,7 +161,7 @@ const getCRMLeadByID = (elementToken, leadID) => {
 }
 
 
-const createFormula = () => {
+const createFormula = (conversationId, flavor) => {
 
 
     var formulaBody = {
@@ -276,18 +277,18 @@ const createFormula = () => {
             console.log("UNHAPPINESS! " + response.statusCode);
             console.log(body);
         }
-        console.log(body);
-        return body;
+        console.log("the formula body", body);
+        lukeStore.saveFormula(body.id, conversationId, flavor);
+        //return body;
     });
 }
 
 
-//const createFormulaInstance = (formulaId, instanceId) => {
-const createFormulaInstance = () => {
+const createFormulaInstance = (formulaId, instanceId) => {
 
  var formulaInstanceBody = {
     "formula": {
-      "id": "4616",
+      "id": formulaId,
       "name": "strideFormula",
       "active": true,
       "singleThreaded": false,
@@ -335,14 +336,14 @@ const createFormulaInstance = () => {
     "configuration": {
       "create": "true",
       "update": "true",
-      "source": "451899",
-      "url": process.env.APP_URL+'/cecallback',
+      "source": instanceId,
+      "url": process.env.APP_URL+'/ce-callback',
       "object": "leads"
     }
   };
     var options = {
         method: 'POST',
-        url: 'https://' + (process.env.CE_ENV || 'api') + '.cloud-elements.com/elements/api-v2/formulas/'+4616+'/instances',
+        url: 'https://' + (process.env.CE_ENV || 'api') + '.cloud-elements.com/elements/api-v2/formulas/'+formulaId+'/instances',
         json: true,
         headers: {
             'content-type': 'application/json',

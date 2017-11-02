@@ -11,7 +11,7 @@ const unfurl_sfdc = (text) => {
 }
 
 const unfurl_hubspotcrm = (text) => {
-    var pat = /https:\/\/app.hubspot.com\/contacts\/(\d+)\/contact\/(\d\+)\//;
+    var pat = /https:\/\/app.hubspot.com\/contacts\/(\d+)\/contact\/(\d\+)\//g;
 
     var candidates = [];
     while ((m = pat.exec(text)) !== null) {
@@ -21,8 +21,22 @@ const unfurl_hubspotcrm = (text) => {
     return candidates;
 }
 
+const unfurl_closeio = (text) => {
+    var pat = /https:\/\/app.close.io\/lead\/(lead_[^\/]+)/g;
+
+    var candidates = [];
+    while ((m = pat.exec(text)) !== null) {
+        console.log("FOUND CLOSEIO: " + JSON.stringify(m));
+        candidates.push({type:"account", id: m[1]});
+    }
+    return candidates;
+}
+
+// https://app.close.io/lead/lead_fiZn8A1RPFCza5hX1DHlkee6jmcmWhOvkt96gO3WOeO/
+
 
 module.exports = {
     sfdc: unfurl_sfdc,
     hubspotcrm: unfurl_hubspotcrm,
+    closeio: unfurl_closeio,
 }
