@@ -39,7 +39,7 @@ const postInstanceBody = (elementKey, code) => {
             };
             break;
 
-    case "hubspotcrm":
+        case "hubspotcrm":
             postInstanceBody = {
                 "element": {
                     "key": "hubspotcrm"
@@ -55,7 +55,11 @@ const postInstanceBody = (elementKey, code) => {
                     "create.bulk.properties": "false",
                     "filter.response.nulls": true,
                     "event.notification.enabled": true,
-                    "event.vendor.type": "webhook",
+
+                    "event.vendor.type": "polling",
+                    "event.poller.refresh_interval": "1",
+                    "event.poller.urls": "contacts\nopportunities\naccounts",
+                    "event.poller.configuration": "{\"accounts\": {\"url\": \"/hubs/crm/accounts?where=lastmodifieddate='${date}'\",\"idField\": \"companyId\",\"filterByUpdatedDate\": true,\"datesConfiguration\": {\"updatedDateField\": \"properties.hs_lastmodifieddate\",\"updatedDateFormat\": \"milliseconds\",\"createdDateField\": \"properties.createdate\",\"createdDateFormat\": \"milliseconds\"},\"createdCheckTolerance\": 10},\"contacts\": {\"url\": \"/hubs/crm/contacts?where=lastmodifieddate='${date}'\",\"idField\": \"vid\",\"filterByUpdatedDate\": true,\"datesConfiguration\": {\"updatedDateField\": \"properties.lastmodifieddate\",\"updatedDateFormat\": \"milliseconds\",\"createdDateField\": \"properties.createdate\",\"createdDateFormat\": \"milliseconds\"},\"createdCheckTolerance\": 10},\"opportunities\": {\"url\": \"/hubs/crm/opportunities?where=lastmodifieddate='${date}'\",\"idField\": \"dealId\",\"filterByUpdatedDate\": true,\"datesConfiguration\": {\"updatedDateField\": \"properties.hs_lastmodifieddate\",\"updatedDateFormat\": \"milliseconds\",\"createdDateField\": \"properties.createdate\",\"createdDateFormat\": \"milliseconds\"},\"createdCheckTolerance\": 10}}",
                 },
                 "tags": [
                     "stride"
@@ -64,16 +68,20 @@ const postInstanceBody = (elementKey, code) => {
             };
             break;
 
-    case "closeio":
+        case "closeio":
             postInstanceBody = {
                 "element": {
                     "key": "closeio"
                 },
                 "configuration": {
                     "event.notification.enabled": true,
-                    "event.vendor.type": "webhook",
+                    // "event.notification.callback.url": process.env.APP_URL + '/closeio/ce-callback/',
+                    "event.vendor.type": "polling",
+                    "event.poller.refresh_interval": "1",
+                    "event.poller.configuration": "{\"contacts\":{\"url\":\"/hubs/crm/contacts?where=date_updated>'${gmtDate:yyyy-MM-dd'T'HH:mm:ss.SSSSSSXXX}'\",\"idField\":\"id\",\"datesConfiguration\":{\"updatedDateField\":\"date_updated\",\"updatedDateFormat\":\"yyyy-MM-dd'T'HH:mm:ss.SSSSSSXXX\",\"createdDateField\":\"date_created\",\"createdDateFormat\":\"yyyy-MM-dd'T'HH:mm:ss.SSSSSSXXX\"}}}",
                     "filter.response.nulls": "true",
                     "username": code,
+                    // "password":
                 },
                 "tags": [
                     "stride"
@@ -82,7 +90,7 @@ const postInstanceBody = (elementKey, code) => {
             };
             break;
 
-    default:
+        default:
             break;
     }
     return postInstanceBody;
@@ -259,119 +267,116 @@ const createFormula = (conversationId, flavor, callback) => {
     //     ]
     // };
 
-    var formulaBody =  {
-    "name": "strideFormula",
-    "userId": 150850,
-    "accountId": 150805,
-    "createdDate": "2017-11-03T02:34:12Z",
-    "steps": [
-      {
-        "id": 49615,
-        "onSuccess": [
-          "whichObject"
+    var formulaBody = {
+        "id": 4649,
+        "name": "strideFormula",
+        "userId": 173313,
+        "accountId": 162319,
+        "createdDate": "2017-11-03T03:42:40Z",
+        "steps": [{
+                "id": 49622,
+                "onSuccess": [
+                    "whichObject"
+                ],
+                "onFailure": [],
+                "name": "filterConfig",
+                "type": "filter",
+                "properties": {
+                    "body": "if(trigger.event.eventType == 'UPDATED' && config.update == true){\n  done(true);\n} else if(trigger.event.eventType == 'CREATED' && config.create == true){\n  done(true);\n} else {\n  done(false);\n}"
+                }
+            },
+            {
+                "id": 49623,
+                "onSuccess": [
+                    "postObject"
+                ],
+                "onFailure": [],
+                "name": "getObject",
+                "type": "elementRequest",
+                "properties": {
+                    "api": "/{common}/{id}",
+                    "path": "steps.whichObject",
+                    "method": "GET",
+                    "elementInstanceId": "${config.source}"
+                }
+            },
+            {
+                "id": 49624,
+                "onSuccess": [],
+                "onFailure": [],
+                "name": "postObject",
+                "type": "httpRequest",
+                "properties": {
+                    "method": "POST",
+                    "body": "steps.getObject.response.body",
+                    "url": "${config.url}"
+                }
+            },
+            {
+                "id": 49625,
+                "onSuccess": [
+                    "getObject"
+                ],
+                "onFailure": [],
+                "name": "whichObject",
+                "type": "script",
+                "properties": {
+                    "body": "var common = trigger.event.objectType;\n\nif(common == \"accounts\"){\n   done({\"common\":\"stride-crm-accounts\",\n        \"id\":trigger.event.objectId})\n   }\nelse if(common == \"contacts\"){\n   done({\"common\":\"stride-crm-contacts\",\n         \"id\":trigger.event.objectId})\n   }\nelse if(common == \"opportunities\"){\n   done({\"common\":\"stride-crm-opportunities\",\n         \"id\":trigger.event.objectId})\n   }\nelse if(common == \"deals\"){\n   done({\"common\":\"stride-crm-opportunities\",\n         \"id\":trigger.event.objectId})\n   }\nelse{\n    done({\"common\":\"abort\"})\n}"
+                }
+            }
         ],
-        "onFailure": [],
-        "name": "filterConfig",
-        "type": "filter",
-        "properties": {
-          "body": "if(trigger.event.EventType == 'UPDATED' && config.update == \"true\"){\n  done(true);\n}\n\nif(trigger.event.EventType == 'CREATED' && config.create == \"true\"){\n  done(true);\n}\n\ndone(false);"
-        }
-      },
-      {
-        "id": 49616,
-        "onSuccess": [
-          "postObject"
-        ],
-        "onFailure": [],
-        "name": "getObject",
-        "type": "elementRequest",
-        "properties": {
-          "elementInstanceId": "${config.source}",
-          "api": "/{common}/{id}",
-          "method": "GET",
-          "path": "steps.whichObject"
-        }
-      },
-      {
-        "id": 49617,
-        "onSuccess": [],
-        "onFailure": [],
-        "name": "postObject",
-        "type": "httpRequest",
-        "properties": {
-          "body": "steps.getObject.response.body",
-          "method": "POST",
-          "url": "${config.url}"
-        }
-      },
-      {
-        "id": 49621,
-        "onSuccess": [
-          "getObject"
-        ],
-        "onFailure": [],
-        "name": "whichObject",
-        "type": "script",
-        "properties": {
-          "body": "var common = trigger.event.objectType;\n\nif(common == \"accounts\"){\n   done{(\"common\":\"stride-crm-accounts\",\n       \"id\":trigger.event})\n   }\nelse if(common == \"contacts\"){\n   done({\"common\":\"stride-crm-contacts\",\n        \"id\":trigger.event})\n   }\nelse if(common == \"opportunities\"){\n   done({\"common\":\"stride-crm-opportunities\",\n        \"id\":trigger.event})\n   }\nelse if(common == \"deals\"){\n   done({\"common\":\"stride-crm-opportunities\",\n        \"id\":trigger.event})\n   }\nelse{\n    done({\"common\":\"abort\"})\n}"
-        }
-      }
-    ],
-    "triggers": [
-      {
-        "id": 4216,
-        "onSuccess": [
-          "filterConfig"
-        ],
-        "onFailure": [],
-        "type": "event",
-        "async": true,
-        "name": "trigger",
-        "properties": {
-          "elementInstanceId": "${config.source}"
-        }
-      }
-    ],
-    "active": true,
-    "singleThreaded": false,
-    "configuration": [
-      {
-        "id": 14520,
-        "key": "create",
-        "name": "create",
-        "type": "value",
-        "required": true
-      },
-      {
-        "id": 14521,
-        "key": "object",
-        "name": "object",
-        "type": "value",
-        "required": true
-      },
-      {
-        "id": 14522,
-        "key": "source",
-        "name": "source",
-        "type": "elementInstance",
-        "required": true
-      },
-      {
-        "id": 14523,
-        "key": "update",
-        "name": "update",
-        "type": "value",
-        "required": true
-      },
-      {
-        "id": 14524,
-        "key": "url",
-        "name": "url",
-        "type": "value",
-        "required": true
-      }
-    ]
-  };
+        "triggers": [{
+            "id": 4218,
+            "onSuccess": [
+                "filterConfig"
+            ],
+            "onFailure": [],
+            "type": "event",
+            "async": true,
+            "name": "trigger",
+            "properties": {
+                "elementInstanceId": "${config.source}"
+            }
+        }],
+        "active": true,
+        "singleThreaded": false,
+        "configuration": [{
+                "id": 14531,
+                "key": "create",
+                "name": "create",
+                "type": "value",
+                "required": true
+            },
+            {
+                "id": 14532,
+                "key": "object",
+                "name": "object",
+                "type": "value",
+                "required": true
+            },
+            {
+                "id": 14533,
+                "key": "source",
+                "name": "source",
+                "type": "elementInstance",
+                "required": true
+            },
+            {
+                "id": 14534,
+                "key": "update",
+                "name": "update",
+                "type": "value",
+                "required": true
+            },
+            {
+                "id": 14535,
+                "key": "url",
+                "name": "url",
+                "type": "value",
+                "required": true
+            }
+        ]
+    };
 
     var options = {
         method: 'POST',
@@ -403,119 +408,118 @@ const createFormula = (conversationId, flavor, callback) => {
 const createFormulaInstance = (formulaId, instanceId, conversationId, flavor) => {
 
     var formulaInstanceBody = {
-    "formula": {
-      "id": formulaId,
-      "name": "strideFormula",
-      "active": true,
-      "singleThreaded": false,
-      "configuration": [
-        {
-          "id": 14520,
-          "key": "create",
-          "name": "create",
-          "type": "value",
-          "required": true
+        "formula": {
+            "id": formulaId,
+            "name": "strideFormula",
+            "active": true,
+            "singleThreaded": false,
+            "configuration": [{
+                    "id": 14520,
+                    "key": "create",
+                    "name": "create",
+                    "type": "value",
+                    "required": true
+                },
+                {
+                    "id": 14521,
+                    "key": "object",
+                    "name": "object",
+                    "type": "value",
+                    "required": true
+                },
+                {
+                    "id": 14522,
+                    "key": "source",
+                    "name": "source",
+                    "type": "elementInstance",
+                    "required": true
+                },
+                {
+                    "id": 14523,
+                    "key": "update",
+                    "name": "update",
+                    "type": "value",
+                    "required": true
+                },
+                {
+                    "id": 14524,
+                    "key": "url",
+                    "name": "url",
+                    "type": "value",
+                    "required": true
+                }
+            ]
         },
-        {
-          "id": 14521,
-          "key": "object",
-          "name": "object",
-          "type": "value",
-          "required": true
-        },
-        {
-          "id": 14522,
-          "key": "source",
-          "name": "source",
-          "type": "elementInstance",
-          "required": true
-        },
-        {
-          "id": 14523,
-          "key": "update",
-          "name": "update",
-          "type": "value",
-          "required": true
-        },
-        {
-          "id": 14524,
-          "key": "url",
-          "name": "url",
-          "type": "value",
-          "required": true
+        "name": "strideFormulaInstance",
+        "settings": {},
+        "active": true,
+        "configuration": {
+            "create": "true",
+            "update": "true",
+            "source": instanceId,
+            "url": process.env.APP_URL + '/' + flavor + '/ce-callback/' + conversationId,
+            "object": "accounts,opportunities,contacts,deals"
         }
-      ]
-    },
-    "name": "strideFormulaInstance",
-    "settings": {},
-    "active": true,
-    "configuration": {
-      "create": "true",
-      "update": "true",
-      "source": instanceId,
-      "url": process.env.APP_URL+'/'+flavor+'/ce-callback/'+conversationId,
-      "object": "accounts,opportunities,contacts,deals"
-    }
-  };
+    };
 
- // var formulaInstanceBody = {
- //    "formula": {
- //      "id": formulaId,
- //      "name": "strideFormula",
- //      "active": true,
- //      "singleThreaded": false,
- //      "configuration": [
- //        {
- //          "id": 14454,
- //          "key": "create",
- //          "name": "create",
- //          "type": "value",
- //          "required": true
- //        },
- //        {
- //          "id": 14455,
- //          "key": "object",
- //          "name": "object",
- //          "type": "value",
- //          "required": true
- //        },
- //        {
- //          "id": 14456,
- //          "key": "source",
- //          "name": "source",
- //          "type": "elementInstance",
- //          "required": true
- //        },
- //        {
- //          "id": 14457,
- //          "key": "update",
- //          "name": "update",
- //          "type": "value",
- //          "required": true
- //        },
- //        {
- //          "id": 14458,
- //          "key": "url",
- //          "name": "url",
- //          "type": "value",
- //          "required": true
- //        }
- //      ]
- //    },
- //    "name": "strideFormulaInstance",
- //    "settings": {},
- //    "active": true,
- //    "configuration": {
- //      "create": "true",
- //      "update": "true",
- //      "source": instanceId,
- //      "url": process.env.APP_URL+'/'+flavor+'/ce-callback/'+conversationId,
- //      "object": "accounts,opportunities,contacts,deals"
- //    }
- //  };
+    // var formulaInstanceBody = {
+    //    "formula": {
+    //      "id": formulaId,
+    //      "name": "strideFormula",
+    //      "active": true,
+    //      "singleThreaded": false,
+    //      "configuration": [
+    //        {
+    //          "id": 14454,
+    //          "key": "create",
+    //          "name": "create",
+    //          "type": "value",
+    //          "required": true
+    //        },
+    //        {
+    //          "id": 14455,
+    //          "key": "object",
+    //          "name": "object",
+    //          "type": "value",
+    //          "required": true
+    //        },
+    //        {
+    //          "id": 14456,
+    //          "key": "source",
+    //          "name": "source",
+    //          "type": "elementInstance",
+    //          "required": true
+    //        },
+    //        {
+    //          "id": 14457,
+    //          "key": "update",
+    //          "name": "update",
+    //          "type": "value",
+    //          "required": true
+    //        },
+    //        {
+    //          "id": 14458,
+    //          "key": "url",
+    //          "name": "url",
+    //          "type": "value",
+    //          "required": true
+    //        }
+    //      ]
+    //    },
+    //    "name": "strideFormulaInstance",
+    //    "settings": {},
+    //    "active": true,
+    //    "configuration": {
+    //      "create": "true",
+    //      "update": "true",
+    //      "source": instanceId,
+    //      "url": process.env.APP_URL+'/'+flavor+'/ce-callback/'+conversationId,
+    //      "object": "accounts,opportunities,contacts,deals"
+    //    }
+    //  };
     var options = {
         method: 'POST',
-        url: 'https://' + (process.env.CE_ENV || 'api') + '.cloud-elements.com/elements/api-v2/formulas/'+formulaId+'/instances',
+        url: 'https://' + (process.env.CE_ENV || 'api') + '.cloud-elements.com/elements/api-v2/formulas/' + formulaId + '/instances',
         json: true,
         headers: {
             'content-type': 'application/json',
@@ -543,31 +547,30 @@ const createFormulaInstance = (formulaId, instanceId, conversationId, flavor) =>
 
 const createContactDefinition = (cb) => {
 
- var contact = {
-    "fields": [
-      {
-        "type": "string",
-        "path": "firstName"
-      },
-      {
-        "type": "string",
-        "path": "lastName"
-      },
-      {
-        "type": "string",
-        "path": "phone"
-      },
-      {
-        "type": "string",
-        "path": "id"
-      },
-      {
-        "type": "string",
-        "path": "email"
-      }
-    ],
-    "level": "organization"
-  };
+    var contact = {
+        "fields": [{
+                "type": "string",
+                "path": "firstName"
+            },
+            {
+                "type": "string",
+                "path": "lastName"
+            },
+            {
+                "type": "string",
+                "path": "phone"
+            },
+            {
+                "type": "string",
+                "path": "id"
+            },
+            {
+                "type": "string",
+                "path": "email"
+            }
+        ],
+        "level": "organization"
+    };
     var options = {
         method: 'POST',
         url: 'https://' + (process.env.CE_ENV || 'api') + '.cloud-elements.com/elements/api-v2/organizations/objects/stride-crm-contacts/definitions',
@@ -594,35 +597,34 @@ const createContactDefinition = (cb) => {
 
 const createOppDefinition = (cb) => {
 
- var opp =  {
-    "fields": [
-      {
-        "type": "string",
-        "path": "closeDate"
-      },
-      {
-        "type": "number",
-        "path": "amount"
-      },
-      {
-        "type": "string",
-        "path": "comments"
-      },
-      {
-        "type": "string",
-        "path": "stage"
-      },
-      {
-        "type": "string",
-        "path": "name"
-      },
-      {
-        "type": "string",
-        "path": "id"
-      }
-    ],
-    "level": "organization"
-  };
+    var opp = {
+        "fields": [{
+                "type": "string",
+                "path": "closeDate"
+            },
+            {
+                "type": "number",
+                "path": "amount"
+            },
+            {
+                "type": "string",
+                "path": "comments"
+            },
+            {
+                "type": "string",
+                "path": "stage"
+            },
+            {
+                "type": "string",
+                "path": "name"
+            },
+            {
+                "type": "string",
+                "path": "id"
+            }
+        ],
+        "level": "organization"
+    };
     var options = {
         method: 'POST',
         url: 'https://' + (process.env.CE_ENV || 'api') + '.cloud-elements.com/elements/api-v2/organizations/objects/stride-crm-opportunities/definitions',
@@ -649,27 +651,26 @@ const createOppDefinition = (cb) => {
 
 const createAccountDefinition = (cb) => {
 
- var acc =  {
-    "fields": [
-      {
-        "type": "string",
-        "path": "name"
-      },
-      {
-        "type": "string",
-        "path": "description"
-      },
-      {
-        "type": "string",
-        "path": "id"
-      },
-      {
-        "type": "string",
-        "path": "status"
-      }
-    ],
-    "level": "organization"
-  };
+    var acc = {
+        "fields": [{
+                "type": "string",
+                "path": "name"
+            },
+            {
+                "type": "string",
+                "path": "description"
+            },
+            {
+                "type": "string",
+                "path": "id"
+            },
+            {
+                "type": "string",
+                "path": "status"
+            }
+        ],
+        "level": "organization"
+    };
     var options = {
         method: 'POST',
         url: 'https://' + (process.env.CE_ENV || 'api') + '.cloud-elements.com/elements/api-v2/organizations/objects/stride-crm-accounts/definitions',
@@ -698,41 +699,38 @@ const createAccountDefinition = (cb) => {
 
 const createCloseTransAcc = (flavor, cb) => {
 
- var acctran = {
-    "level": "organization",
-    "objectName": "stride-crm-accounts",
-    "vendorName": "accounts",
-    "startDate": "2017-11-02 21:17:39.441099",
-    "fields": [
-      {
-        "type": "string",
-        "path": "name",
-        "vendorPath": "name",
-        "level": "organization"
-      }
-    ],
-    "configuration": [
-      {
-        "type": "passThrough",
-        "properties": {
-          "fromVendor": false,
-          "toVendor": false
-        }
-      },
-      {
-        "type": "inherit"
-      }
-    ],
-    "script": {
-      "body": "if(fromVendor){\n  transformedObject.description = originalObject.description;\n  transformedObject.status = originalObject.status_label;\n  transformedObject.id = originalObject.id;  \n}\ndone(transformedObject);",
-      "mimeType": "application/javascript",
-      "filterEmptyResponse": false
-    },
-    "isLegacy": false
-   };
+    var acctran = {
+        "level": "organization",
+        "objectName": "stride-crm-accounts",
+        "vendorName": "accounts",
+        "startDate": "2017-11-02 21:17:39.441099",
+        "fields": [{
+            "type": "string",
+            "path": "name",
+            "vendorPath": "name",
+            "level": "organization"
+        }],
+        "configuration": [{
+                "type": "passThrough",
+                "properties": {
+                    "fromVendor": false,
+                    "toVendor": false
+                }
+            },
+            {
+                "type": "inherit"
+            }
+        ],
+        "script": {
+            "body": "if(fromVendor){\n  transformedObject.description = originalObject.description;\n  transformedObject.status = originalObject.status_label;\n  transformedObject.id = originalObject.id;  \n}\ndone(transformedObject);",
+            "mimeType": "application/javascript",
+            "filterEmptyResponse": false
+        },
+        "isLegacy": false
+    };
     var options = {
         method: 'POST',
-        url: 'https://' + (process.env.CE_ENV || 'api') + '.cloud-elements.com/elements/api-v2/organizations/elements/'+flavor+'/transformations/stride-crm-accounts',
+        url: 'https://' + (process.env.CE_ENV || 'api') + '.cloud-elements.com/elements/api-v2/organizations/elements/' + flavor + '/transformations/stride-crm-accounts',
         json: true,
         headers: {
             'content-type': 'application/json',
@@ -757,53 +755,51 @@ const createCloseTransAcc = (flavor, cb) => {
 
 const createCloseTransCon = (flavor, cb) => {
 
- var contran = {
-    "level": "organization",
-    "objectName": "stride-crm-contacts",
-    "vendorName": "contacts",
-    "startDate": "2017-11-02 21:51:18.390141",
-    "fields": [
-      {
-        "type": "string",
-        "path": "email",
-        "vendorPath": "officeEmail",
-        "level": "organization"
-      },
-      {
-        "type": "string",
-        "path": "id",
-        "vendorPath": "id",
-        "level": "organization"
-      },
-      {
-        "type": "string",
-        "path": "phone",
-        "vendorPath": "officePhone",
-        "level": "organization"
-      }
-    ],
-    "configuration": [
-      {
-        "type": "passThrough",
-        "properties": {
-          "fromVendor": false,
-          "toVendor": false
-        }
-      },
-      {
-        "type": "inherit"
-      }
-    ],
-    "script": {
-      "body": "if(fromVendor){\n  var arr = originalObject.name.split(\" \");\n  transformedObject.firstName = arr[0];\n  transformedObject.lastName = arr[1]; \n}\n\ndone(transformedObject);",
-      "mimeType": "application/javascript",
-      "filterEmptyResponse": false
-    },
-    "isLegacy": false
-  };
+    var contran = {
+        "level": "organization",
+        "objectName": "stride-crm-contacts",
+        "vendorName": "contacts",
+        "startDate": "2017-11-02 21:51:18.390141",
+        "fields": [{
+                "type": "string",
+                "path": "email",
+                "vendorPath": "officeEmail",
+                "level": "organization"
+            },
+            {
+                "type": "string",
+                "path": "id",
+                "vendorPath": "id",
+                "level": "organization"
+            },
+            {
+                "type": "string",
+                "path": "phone",
+                "vendorPath": "officePhone",
+                "level": "organization"
+            }
+        ],
+        "configuration": [{
+                "type": "passThrough",
+                "properties": {
+                    "fromVendor": false,
+                    "toVendor": false
+                }
+            },
+            {
+                "type": "inherit"
+            }
+        ],
+        "script": {
+            "body": "if(fromVendor){\n  var arr = originalObject.name.split(\" \");\n  transformedObject.firstName = arr[0];\n  transformedObject.lastName = arr[1]; \n}\n\ndone(transformedObject);",
+            "mimeType": "application/javascript",
+            "filterEmptyResponse": false
+        },
+        "isLegacy": false
+    };
     var options = {
         method: 'POST',
-        url: 'https://' + (process.env.CE_ENV || 'api') + '.cloud-elements.com/elements/api-v2/organizations/elements/'+flavor+'/transformations/stride-crm-contacts',
+        url: 'https://' + (process.env.CE_ENV || 'api') + '.cloud-elements.com/elements/api-v2/organizations/elements/' + flavor + '/transformations/stride-crm-contacts',
         json: true,
         headers: {
             'content-type': 'application/json',
@@ -828,53 +824,51 @@ const createCloseTransCon = (flavor, cb) => {
 
 const createCloseTransOpp = (flavor, cb) => {
 
- var opptran = {
-    "level": "organization",
-    "objectName": "stride-crm-opportunities",
-    "vendorName": "opportunities",
-    "startDate": "2017-11-02 21:09:16.405674",
-    "fields": [
-      {
-        "type": "number",
-        "path": "amount",
-        "vendorPath": "value",
-        "level": "organization"
-      },
-      {
-        "type": "string",
-        "path": "comments",
-        "vendorPath": "note",
-        "level": "organization"
-      },
-      {
-        "type": "string",
-        "path": "name",
-        "vendorPath": "lead_name",
-        "level": "organization"
-      }
-    ],
-    "configuration": [
-      {
-        "type": "passThrough",
-        "properties": {
-          "fromVendor": false,
-          "toVendor": false
-        }
-      },
-      {
-        "type": "inherit"
-      }
-    ],
-    "script": {
-      "body": "if(fromVendor){\n \n  transformedObject.closeDate = originalObject.date_won;\n  transformedObject.id= originalObject.id;\n  transformedObject.stage = originalObject.status_type;\n  \n\n}\n\ndone(transformedObject);",
-      "mimeType": "application/javascript",
-      "filterEmptyResponse": false
-    },
-    "isLegacy": false
-  };
+    var opptran = {
+        "level": "organization",
+        "objectName": "stride-crm-opportunities",
+        "vendorName": "opportunities",
+        "startDate": "2017-11-02 21:09:16.405674",
+        "fields": [{
+                "type": "number",
+                "path": "amount",
+                "vendorPath": "value",
+                "level": "organization"
+            },
+            {
+                "type": "string",
+                "path": "comments",
+                "vendorPath": "note",
+                "level": "organization"
+            },
+            {
+                "type": "string",
+                "path": "name",
+                "vendorPath": "lead_name",
+                "level": "organization"
+            }
+        ],
+        "configuration": [{
+                "type": "passThrough",
+                "properties": {
+                    "fromVendor": false,
+                    "toVendor": false
+                }
+            },
+            {
+                "type": "inherit"
+            }
+        ],
+        "script": {
+            "body": "if(fromVendor){\n \n  transformedObject.closeDate = originalObject.date_won;\n  transformedObject.id= originalObject.id;\n  transformedObject.stage = originalObject.status_type;\n  \n\n}\n\ndone(transformedObject);",
+            "mimeType": "application/javascript",
+            "filterEmptyResponse": false
+        },
+        "isLegacy": false
+    };
     var options = {
         method: 'POST',
-        url: 'https://' + (process.env.CE_ENV || 'api') + '.cloud-elements.com/elements/api-v2/organizations/elements/'+flavor+'/transformations/stride-crm-opportunities',
+        url: 'https://' + (process.env.CE_ENV || 'api') + '.cloud-elements.com/elements/api-v2/organizations/elements/' + flavor + '/transformations/stride-crm-opportunities',
         json: true,
         headers: {
             'content-type': 'application/json',
@@ -899,74 +893,72 @@ const createCloseTransOpp = (flavor, cb) => {
 
 const createHubTransOpp = (flavor, cb) => {
 
- var opptranhub = {
-  "level": "organization",
-  "objectName": "stride-crm-opportunities",
-  "vendorName": "deals",
-  "startDate": "2017-11-02 21:12:24.11304",
-  "fields": [
-    {
-      "type": "number",
-      "path": "amount",
-      "vendorPath": "properties.amount",
-      "level": "organization"
-    },
-    {
-      "type": "string",
-      "path": "closeDate",
-      "vendorPath": "properties.closedate",
-      "level": "organization"
-    },
-    {
-      "type": "string",
-      "path": "comments",
-      "vendorPath": "properties.description",
-      "level": "organization"
-    },
-    {
-      "type": "string",
-      "path": "id",
-      "vendorPath": "dealId",
-      "level": "organization"
-    },
-    {
-      "type": "string",
-      "path": "name",
-      "vendorPath": "properties.dealname",
-      "level": "organization"
-    },
-    {
-      "type": "string",
-      "path": "stage",
-      "vendorPath": "properties.dealstage",
-      "level": "organization"
-    }
-  ],
-  "configuration": [
-    {
-      "type": "addToDocumentation"
-    },
-    {
-      "type": "passThrough",
-      "properties": {
-        "fromVendor": false,
-        "toVendor": false
-      }
-    },
-    {
-      "type": "inherit"
-    }
-  ],
-  "script": {
-    "body": "if (fromVendor) {\n  transformedObject.closeDate = new Date(parseInt(originalObject.properties.closedate)).toISOString().substr(0,10)\n}\ndone(transformedObject);\n//  new Date(1512028800000).toISOString().substr(0,10)\n",
-    "mimeType": "application/javascript",
-    "filterEmptyResponse": false
-  },
-  "isLegacy": false
-};
+    var opptranhub = {
+        "level": "organization",
+        "objectName": "stride-crm-opportunities",
+        "vendorName": "deals",
+        "startDate": "2017-11-02 21:12:24.11304",
+        "fields": [{
+                "type": "number",
+                "path": "amount",
+                "vendorPath": "properties.amount",
+                "level": "organization"
+            },
+            {
+                "type": "string",
+                "path": "closeDate",
+                "vendorPath": "properties.closedate",
+                "level": "organization"
+            },
+            {
+                "type": "string",
+                "path": "comments",
+                "vendorPath": "properties.description",
+                "level": "organization"
+            },
+            {
+                "type": "string",
+                "path": "id",
+                "vendorPath": "dealId",
+                "level": "organization"
+            },
+            {
+                "type": "string",
+                "path": "name",
+                "vendorPath": "properties.dealname",
+                "level": "organization"
+            },
+            {
+                "type": "string",
+                "path": "stage",
+                "vendorPath": "properties.dealstage",
+                "level": "organization"
+            }
+        ],
+        "configuration": [{
+                "type": "addToDocumentation"
+            },
+            {
+                "type": "passThrough",
+                "properties": {
+                    "fromVendor": false,
+                    "toVendor": false
+                }
+            },
+            {
+                "type": "inherit"
+            }
+        ],
+        "script": {
+            "body": "if (fromVendor) {\n  transformedObject.closeDate = new Date(parseInt(originalObject.properties.closedate)).toISOString().substr(0,10)\n}\ndone(transformedObject);\n//  new Date(1512028800000).toISOString().substr(0,10)\n",
+            "mimeType": "application/javascript",
+            "filterEmptyResponse": false
+        },
+        "isLegacy": false
+    };
     var options = {
         method: 'POST',
-        url: 'https://' + (process.env.CE_ENV || 'api') + '.cloud-elements.com/elements/api-v2/organizations/elements/'+flavor+'/transformations/stride-crm-opportunities',
+        url: 'https://' + (process.env.CE_ENV || 'api') + '.cloud-elements.com/elements/api-v2/organizations/elements/' + flavor + '/transformations/stride-crm-opportunities',
         json: true,
         headers: {
             'content-type': 'application/json',
@@ -990,61 +982,58 @@ const createHubTransOpp = (flavor, cb) => {
 
 const createHubTransCon = (flavor, cb) => {
 
- var contranhub = {
-  "level": "organization",
-  "objectName": "stride-crm-contacts",
-  "vendorName": "contacts",
-  "startDate": "2017-11-02 21:17:27.595168",
-  "fields": [
-    {
-      "type": "string",
-      "path": "email",
-      "vendorPath": "properties.email",
-      "level": "organization"
-    },
-    {
-      "type": "string",
-      "path": "firstName",
-      "vendorPath": "properties.firstname",
-      "level": "organization"
-    },
-    {
-      "type": "string",
-      "path": "id",
-      "vendorPath": "vid",
-      "level": "organization"
-    },
-    {
-      "type": "string",
-      "path": "lastName",
-      "vendorPath": "properties.lastname",
-      "level": "organization"
-    },
-    {
-      "type": "string",
-      "path": "phone",
-      "vendorPath": "properties.phone",
-      "level": "organization"
-    }
-  ],
-  "configuration": [
-    {
-      "type": "passThrough",
-      "properties": {
-        "fromVendor": false,
-        "toVendor": false
-      }
-    },
-    {
-      "type": "inherit"
-    }
-  ],
-  "isLegacy": false
-}
-;
+    var contranhub = {
+        "level": "organization",
+        "objectName": "stride-crm-contacts",
+        "vendorName": "contacts",
+        "startDate": "2017-11-02 21:17:27.595168",
+        "fields": [{
+                "type": "string",
+                "path": "email",
+                "vendorPath": "properties.email",
+                "level": "organization"
+            },
+            {
+                "type": "string",
+                "path": "firstName",
+                "vendorPath": "properties.firstname",
+                "level": "organization"
+            },
+            {
+                "type": "string",
+                "path": "id",
+                "vendorPath": "vid",
+                "level": "organization"
+            },
+            {
+                "type": "string",
+                "path": "lastName",
+                "vendorPath": "properties.lastname",
+                "level": "organization"
+            },
+            {
+                "type": "string",
+                "path": "phone",
+                "vendorPath": "properties.phone",
+                "level": "organization"
+            }
+        ],
+        "configuration": [{
+                "type": "passThrough",
+                "properties": {
+                    "fromVendor": false,
+                    "toVendor": false
+                }
+            },
+            {
+                "type": "inherit"
+            }
+        ],
+        "isLegacy": false
+    };
     var options = {
         method: 'POST',
-        url: 'https://' + (process.env.CE_ENV || 'api') + '.cloud-elements.com/elements/api-v2/organizations/elements/'+flavor+'/transformations/stride-crm-contacts',
+        url: 'https://' + (process.env.CE_ENV || 'api') + '.cloud-elements.com/elements/api-v2/organizations/elements/' + flavor + '/transformations/stride-crm-contacts',
         json: true,
         headers: {
             'content-type': 'application/json',
@@ -1068,59 +1057,57 @@ const createHubTransCon = (flavor, cb) => {
 
 const createHubTransAcc = (flavor, cb) => {
 
- var acctranhub = {
-  "level": "organization",
-  "objectName": "stride-crm-accounts",
-  "vendorName": "companies",
-  "startDate": "2017-11-02 21:15:20.024733",
-  "fields": [
-    {
-      "type": "string",
-      "path": "description",
-      "vendorPath": "properties.description",
-      "level": "organization"
-    },
-    {
-      "type": "string",
-      "path": "id",
-      "vendorPath": "companyId",
-      "level": "organization"
-    },
-    {
-      "type": "string",
-      "path": "name",
-      "vendorPath": "properties.name",
-      "level": "organization"
-    },
-    {
-      "type": "string",
-      "path": "status",
-      "vendorPath": "properties.state",
-      "level": "organization"
+    var acctranhub = {
+        "level": "organization",
+        "objectName": "stride-crm-accounts",
+        "vendorName": "companies",
+        "startDate": "2017-11-02 21:15:20.024733",
+        "fields": [{
+                "type": "string",
+                "path": "description",
+                "vendorPath": "properties.description",
+                "level": "organization"
+            },
+            {
+                "type": "string",
+                "path": "id",
+                "vendorPath": "companyId",
+                "level": "organization"
+            },
+            {
+                "type": "string",
+                "path": "name",
+                "vendorPath": "properties.name",
+                "level": "organization"
+            },
+            {
+                "type": "string",
+                "path": "status",
+                "vendorPath": "properties.state",
+                "level": "organization"
+            }
+        ],
+        "configuration": [{
+                "type": "addToDocumentation"
+            },
+            {
+                "type": "passThrough",
+                "properties": {
+                    "fromVendor": false,
+                    "toVendor": false
+                }
+            },
+            {
+                "type": "inherit"
+            }
+        ],
+        "isLegacy": false
     }
-  ],
-  "configuration": [
-    {
-      "type": "addToDocumentation"
-    },
-    {
-      "type": "passThrough",
-      "properties": {
-        "fromVendor": false,
-        "toVendor": false
-      }
-    },
-    {
-      "type": "inherit"
-    }
-  ],
-  "isLegacy": false
-}
 
-;
+    ;
     var options = {
         method: 'POST',
-        url: 'https://' + (process.env.CE_ENV || 'api') + '.cloud-elements.com/elements/api-v2/organizations/elements/'+flavor+'/transformations/stride-crm-accounts',
+        url: 'https://' + (process.env.CE_ENV || 'api') + '.cloud-elements.com/elements/api-v2/organizations/elements/' + flavor + '/transformations/stride-crm-accounts',
         json: true,
         headers: {
             'content-type': 'application/json',
@@ -1157,32 +1144,32 @@ const createDefinitions = (cb) => {
 const createTransformations = (flavor, cb) => {
     switch (flavor) {
 
-    case "sfdc":
-        throw "not implemented";
+        case "sfdc":
+            throw "not implemented";
 
-    case "hubspotcrm":
-        console.log("ABOUT TO CREATE Acc trans");
-        createHubTransAcc(flavor, ()=>{
-            console.log("ABOUT TO CREATE Con trans");
-            createHubTransCon(flavor, ()=>{
-                console.log("ABOUT TO CREATE Opp trans");
-                createHubTransOpp(flavor, cb);
+        case "hubspotcrm":
+            console.log("ABOUT TO CREATE Acc trans");
+            createHubTransAcc(flavor, () => {
+                console.log("ABOUT TO CREATE Con trans");
+                createHubTransCon(flavor, () => {
+                    console.log("ABOUT TO CREATE Opp trans");
+                    createHubTransOpp(flavor, cb);
+                });
             });
-        });
-        break;
+            break;
 
-    case "closeio":
-        createCloseTransAcc(flavor, ()=>{
-            createCloseTransCon(flavor, ()=>{
-                createCloseTransOpp(flavor, cb);
+        case "closeio":
+            createCloseTransAcc(flavor, () => {
+                createCloseTransCon(flavor, () => {
+                    createCloseTransOpp(flavor, cb);
+                });
             });
-        });
-        break;
+            break;
     }
 }
 
 const createAllTransformations = (cb) => {
-    createTransformations("hubspotcrm", ()=>{
+    createTransformations("hubspotcrm", () => {
         createTransformations("closeio", cb);
     });
 }
