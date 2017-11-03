@@ -1,0 +1,65 @@
+{
+  "level": "organization",
+  "objectName": "stride-crm-opportunities",
+  "vendorName": "deals",
+  "startDate": "2017-11-02 21:12:24.11304",
+  "fields": [
+    {
+      "type": "number",
+      "path": "amount",
+      "vendorPath": "properties.amount",
+      "level": "organization"
+    },
+    {
+      "type": "string",
+      "path": "closeDate",
+      "vendorPath": "properties.closedate",
+      "level": "organization"
+    },
+    {
+      "type": "string",
+      "path": "comments",
+      "vendorPath": "properties.description",
+      "level": "organization"
+    },
+    {
+      "type": "string",
+      "path": "id",
+      "vendorPath": "dealId",
+      "level": "organization"
+    },
+    {
+      "type": "string",
+      "path": "name",
+      "vendorPath": "properties.dealname",
+      "level": "organization"
+    },
+    {
+      "type": "string",
+      "path": "stage",
+      "vendorPath": "properties.dealstage",
+      "level": "organization"
+    }
+  ],
+  "configuration": [
+    {
+      "type": "addToDocumentation"
+    },
+    {
+      "type": "passThrough",
+      "properties": {
+        "fromVendor": false,
+        "toVendor": false
+      }
+    },
+    {
+      "type": "inherit"
+    }
+  ],
+  "script": {
+    "body": "if (fromVendor) {\n  transformedObject.closeDate = new Date(parseInt(originalObject.properties.closedate)).toISOString().substr(0,10)\n}\ndone(transformedObject);\n//  new Date(1512028800000).toISOString().substr(0,10)\n",
+    "mimeType": "application/javascript",
+    "filterEmptyResponse": false
+  },
+  "isLegacy": false
+}

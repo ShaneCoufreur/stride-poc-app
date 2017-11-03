@@ -64,7 +64,7 @@ const flavorName = {
 
 const flavorRegex = {
     'sfdc': "[0-9A-Za-z][0-9A-Za-z][0-9A-Za-z][0-9A-Za-z][0-9A-Za-z][0-9A-Za-z][0-9A-Za-z]+",
-    'hubspotcrm': "https://app[.]hubspot[.]com/contacts",
+    'hubspotcrm': "https://app[.]hubspot[.]com/",
     'closeio': "https://app[.]close[.]io/",
 }
 
@@ -183,6 +183,25 @@ function myLeadCard(lead) {
     return doc.toJSON();
 }
 
+function postOpportunityCard(flavor, cloudId, conversationId, opp) {
+    const doc = new Document();
+
+    doc.paragraph()
+        .text('Opportunity ' + opp.id)
+
+    const card = doc.applicationCard('Opportunity: ' + opp.name)
+        .description('Value: $' + opp.amount);
+    card.detail()
+        .title('Stage')
+        .text(opp.stage)
+    const document = doc.toJSON();
+
+    const stride = stridef[flavor];
+
+    stride.sendMessage({ cloudId, conversationId, document })
+        .catch(err => console.error('  Something went wrong', prettify_json(err)));
+}
+
 function getObject(flavor, conv, schema, id, then) {
 
     const inst = lukeStore.getInstance(conv, flavor);
@@ -249,30 +268,108 @@ app.post('/:flavor/message',
 
         const find = unfurl[flavor];
         const candidates = find(req.body.message.text);
+
         candidates.forEach((c) => {
             console.log("Checking " + JSON.stringify(c));
 
             switch (c.type) {
+            case "opportunity":
+                stride.sendTextMessage({
+                    cloudId,
+                    conversationId,
+                    text: "what about opportunity " + c.id + "?",
+                })
+                getObject(flavor, conversationId, 'stride-crm-opportunities', c.id, (obj) => {
+                    if (obj) {
+                        console.log("OPP " + prettify_json(obj))
+                        postOpportunityCard(flavor,
+                                            cloudId,
+                                            conversationId,
+                                            obj);
+                    }
+                })
+                break;
+
             case "account":
-                stride.sendTextMessage({cloudId, conversationId, text: "what about account " + c.id + "?"})
-                // TODO stride-crm-account
+                stride.sendTextMessage({
+                    cloudId,
+                    conversationId,
+                    text: "what about account " + c.id + "?",
+                })
+
                 getObject(flavor, conversationId, 'accounts', c.id, (obj) => {
                     if (obj) {
                         console.log("Yo " + prettify_json(obj))
                     }
                 })
+                break;
 
-            case "lead":
-                getObject(flavor, conversationId, 'stride-crm-lead', c.id, (lead) => {
-                    if (lead) {
-                        const document = myLeadCard(lead);
-                        stride.sendMessage({ cloudId, conversationId, document })
-                            .catch(err => console.error('  Something went wrong', prettify_json(err)));
-                    }
-                })
+                case "lead":
+                    getObject(flavor, conversationId, 'stride-crm-lead', c.id, (lead) => {
+                        if (lead) {
+                            const document = myLeadCard(lead);
+                            stride.sendMessage({ cloudId, conversationId, document })
+                                .catch(err => console.error('  Something went wrong', prettify_json(err)));
+                        }
+                    })
             }
         });
     })
+
+
+const newContact = /new contact ([A-Za-z]+) ([A-Za-z]+)(.*)/;
+const emailPattern = /[A-Za-z][.A-Za-z0-9]*@[A-Za-z0-9.]+/
+const phonePattern1 = /\([0-9]{3}\) *[0-9]{3}-[0-9]{4}/
+const phonePattern2 = /\+[1-9][0-9]* [0-9 -]+/
+
+function createNewContact(flavor, conversationId, text, match) {
+    const firstName = match[1];
+    const lastName = match[2];
+    const extras = match[3];
+
+    const emailMatch = emailPattern.exec(extras);
+    const phoneMatch = phonePattern1.exec(extras) || phonePattern2.exec(extras);
+    console.log("Thinking about '" + extras + "'")
+    console.log("EMAIL: " + JSON.stringify(emailMatch));
+    console.log("Phone: " + JSON.stringify(phoneMatch));
+
+    var contact = {
+        firstName: firstName,
+        lastName: lastName,
+    }
+    if (emailMatch) {
+        contact.email = emailMatch[0];
+    }
+    if (phoneMatch) {
+        contact.phone = phoneMatch[0];
+    }
+
+    const inst = lukeStore.getInstance(conversationId, flavor);
+    if (!inst) {
+        console.log("No instance <" + conversationId + "> (" + flavor + ")");
+        return;
+    }
+
+    console.log("Creating contact: " + JSON.stringify(contact));
+
+    const options = {
+        url: 'https://' + (process.env.CE_ENV || 'api') + '.cloud-elements.com/elements/api-v2/hubs/crm/stride-crm-contacts',
+        headers: {
+            'content-type': 'application/json',
+            'authorization': "User " + process.env.CE_USER + ", Organization " + process.env.CE_ORG + ", Element " + inst.token,
+        },
+        method: 'POST',
+        body: contact,
+        json: true
+    }
+    request(options, (err, response, body) => {
+        if (checkForErrors(err, response, body)) {
+            console.log("bummer");
+            return;
+        }
+        console.log("success: " + JSON.stringify(body));
+    });
+}
 
 
 /**
@@ -297,6 +394,16 @@ app.post('/:flavor/bot-mention',
         const flavor = req.params.flavor;
         const stride = stridef[flavor];
         console.log('- (' + flavor + ') bot mention', prettify_json(req.body));
+
+        var m = newContact.exec(req.body.message.text);
+        if (m !== null) {
+            res.sendStatus(200);
+            createNewContact(flavor,
+                             req.body.conversation.id,
+                             req.body.message.text,
+                             m);
+            return;
+        }
 
         if (/lead/.exec(req.body.message.text)) {
             res.sendStatus(200);
@@ -669,7 +776,6 @@ app.get('/hubspotcrm/login', (req, res) => {
 
 });
 
-
 // OAuth2 receiver
 app.get('/:flavor/auth', (req, res) => {
     let flavor = req.params.flavor;
@@ -678,9 +784,14 @@ app.get('/:flavor/auth', (req, res) => {
     console.log('queries: ' + JSON.stringify(req.query));
     let code = req.query.code;
     let conversationId;
+    let cloudId;
 
     if (req.query.state) {
-        conversationId = jwt_decode(req.query.state).context.resourceId;
+        const jwt = jwt_decode(req.query.state);
+        console.log("JWT is " + JSON.stringify(jwt));
+
+        conversationId = jwt.context.resourceId;
+        cloudId = jwt.context.cloudId;
         console.log(conversationId);
     } else {
         console.log('BROKENN :((')
@@ -717,6 +828,13 @@ app.get('/:flavor/auth', (req, res) => {
             return;
         }
 
+        stridef[flavor].updateGlanceState({
+            cloudId: cloudId,
+            conversationId: conversationId,
+            glanceKey: 'cebot-glance',
+            stateTxt: "CE " + flavorName[flavor],
+        })
+
         // success! we have an instance!
         console.log(body.name + " " + body.token);
         // let's make a SFDC request
@@ -728,16 +846,29 @@ app.get('/:flavor/auth', (req, res) => {
             elementKey: body.element.key,
             id: body.id
         }
+
         lukeStore.saveInstance(conversationId, flavor, instanceBody);
+
         var formulaIdObj = lukeStore.checkIfFormula();
         console.log("formulaIdObj", formulaIdObj);
         if (!formulaIdObj.id) {
-            ce.createFormula(conversationId, flavor);
+            // this is our first bit of activity...
+            // create definitions and transformations
+            console.log("CREATING DEFINITIONS...");
+            ce.createDefinitions(()=>{
+                console.log("CREATING TRANSFORMATIONS...");
+                ce.createAllTransformations(()=>{
+                    console.log("CREATING FORMULA...");
+                    // now create the formula
+                    ce.createFormula(conversationId, flavor, (formulaId) => {
+                        ce.createFormulaInstance(formulaId, instanceBody.id, conversationId, flavor)
+                    });
+                });
+            });
             //create instance
-         }
-         else{
-             ce.createFormulaInstance(formulaIdObj.id, instanceBody.id)
-         }
+        } else {
+            ce.createFormulaInstance(formulaIdObj.id, instanceBody.id, conversationId, flavor)
+        }
 
         //return res.redirect(process.env.APP_URL + "/closeme")
         if (flavor === 'closeio') {
@@ -749,41 +880,38 @@ app.get('/:flavor/auth', (req, res) => {
 });
 
 // Event reciever from Cloud Elements
-app.post('/:flavor/ce-callback', (req, res) => {
+app.post('/:flavor/ce-callback/:conversationId', (req, res) => {
     let flavor = req.params.flavor;
     console.log("event received!");
     const stride = stridef[flavor];
     const cloudId = "911f7ab6-0583-4083-bed7-bad889ec4c92";
     // lookup conversationId from instanceId on event obj
-    let conversationId = lukeStore.getConversation(req.body.instanceId, flavor).conversationId;
-    // res.json({
-    //     conversation: conversationId,
-    //     eventObj: req.body
-    // });
-    // getLead(flavor, convo, req.body.id, (lead) => {
-    //     if (lead) {
-    //         const document = myLeadCard(lead);
-    //         stride.sendMessage({ cloudId, conversationId, document })
-    //             .catch(err => console.error('  Something went wrong', prettify_json(err)));
-    //     }
-    // })
-    stride.sendMessage({
-            cloudId,
-            conversationId,
-            document: {
-                version: 1,
-                type: "doc",
-                content: [{
-                    type: "paragraph",
-                    content: [{
-                        type: "text",
-                        text: "New lead from [Salesforce]: " + JSON.stringify(req.body) + " !"
-                    }]
-                }]
-            }
-        })
-        .then(() => res.sendStatus(200))
-        .catch(err => console.error('  Something went wrong', prettify_json(err)));
+    let conversationId = req.params.conversationId;
+    let lead = req.body;
+    if (lead) {
+        const document = myLeadCard(lead);
+        stride.sendMessage({ cloudId, conversationId, document })
+            .then(() => res.sendStatus(200))
+            .catch(err => console.error('  Something went wrong', prettify_json(err)));
+        // } else {
+        //     stride.sendMessage({
+        //         cloudId,
+        //         conversationId,
+        //         document: {
+        //             version: 1,
+        //             type: "doc",
+        //             content: [{
+        //                 type: "paragraph",
+        //                 content: [{
+        //                     type: "text",
+        //                     text: "Error message - no lead found"
+        //                 }]
+        //             }]
+        //         }
+        //     })
+        //     .then(() => res.sendStatus(200))
+        //     .catch(err => console.error('  Something went wrong', prettify_json(err)));
+    }
 });
 
 

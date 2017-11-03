@@ -71,6 +71,10 @@
           * Call the app backend to save configuration settings when the user clicks on the "Save" action
           */
          AP.register({
+             "glance-update": function(data) {
+                 console.log("Glance was updated: ", data);
+             },
+
              "dialog-button-clicked": function(event, closeDialog) {
                  if (event.action === "action-save") {
 

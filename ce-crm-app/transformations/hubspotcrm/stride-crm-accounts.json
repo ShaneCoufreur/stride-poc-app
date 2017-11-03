@@ -1,0 +1,48 @@
+{
+  "level": "organization",
+  "objectName": "stride-crm-accounts",
+  "vendorName": "companies",
+  "startDate": "2017-11-02 21:15:20.024733",
+  "fields": [
+    {
+      "type": "string",
+      "path": "description",
+      "vendorPath": "properties.description",
+      "level": "organization"
+    },
+    {
+      "type": "string",
+      "path": "id",
+      "vendorPath": "companyId",
+      "level": "organization"
+    },
+    {
+      "type": "string",
+      "path": "name",
+      "vendorPath": "properties.name",
+      "level": "organization"
+    },
+    {
+      "type": "string",
+      "path": "status",
+      "vendorPath": "properties.state",
+      "level": "organization"
+    }
+  ],
+  "configuration": [
+    {
+      "type": "addToDocumentation"
+    },
+    {
+      "type": "passThrough",
+      "properties": {
+        "fromVendor": false,
+        "toVendor": false
+      }
+    },
+    {
+      "type": "inherit"
+    }
+  ],
+  "isLegacy": false
+}

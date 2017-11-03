@@ -542,8 +542,10 @@ function factory({clientId, clientSecret, env = 'development', debugId = 'stride
     // Either from the "jwt" request parameter
     // Or from the "authorization" header, as "Bearer xxx"
     const encodedJwt = req.query['jwt']
-      || req.headers['authorization'].substring(7)
-      || req.headers['Authorization'].substring(7)
+          || (req.headers['authorization'] || '').substring(7)
+          || (req.headers['Authorization'] || '').substring(7)
+
+      console.log("USING " + JSON.stringify(encodedJwt));
 
     if  (!encodedJwt)
       throw new Error('Stride/getJWT: expected encoded JWT not found!')

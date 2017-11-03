@@ -11,12 +11,18 @@ const unfurl_sfdc = (text) => {
 }
 
 const unfurl_hubspotcrm = (text) => {
-    var pat = /https:\/\/app.hubspot.com\/contacts\/(\d+)\/contact\/(\d\+)\//g;
-
     var candidates = [];
+
+    var pat = /https:\/\/app.hubspot.com\/contacts\/(\d+)\/contact\/(\d+)\//g;
     while ((m = pat.exec(text)) !== null) {
         console.log("FOUND: " + JSON.stringify(m));
-        candidates.push({type:"lead", id: m[1]});
+        candidates.push({type:"lead", id: m[2]});
+    }
+
+    var pat = /https:\/\/app.hubspot.com\/contacts\/(\d+)\/deal\/(\d+)\//g;
+    while ((m = pat.exec(text)) !== null) {
+        console.log("FOUND: " + JSON.stringify(m));
+        candidates.push({type:"opportunity", id: m[2]});
     }
     return candidates;
 }

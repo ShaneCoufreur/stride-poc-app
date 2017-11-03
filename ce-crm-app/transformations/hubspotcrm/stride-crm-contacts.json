@@ -1,0 +1,57 @@
+{
+  "level": "organization",
+  "objectName": "stride-crm-contacts",
+  "vendorName": "contacts",
+  "startDate": "2017-11-02 21:17:27.595168",
+  "fields": [
+    {
+      "type": "string",
+      "path": "email",
+      "vendorPath": "properties.email",
+      "level": "organization"
+    },
+    {
+      "type": "string",
+      "path": "firstName",
+      "vendorPath": "properties.firstname",
+      "level": "organization"
+    },
+    {
+      "type": "string",
+      "path": "id",
+      "vendorPath": "vid",
+      "level": "organization"
+    },
+    {
+      "type": "string",
+      "path": "lastName",
+      "vendorPath": "properties.lastname",
+      "level": "organization"
+    },
+    {
+      "type": "string",
+      "path": "phone",
+      "vendorPath": "properties.phone",
+      "level": "organization"
+    },
+    {
+      "type": "string",
+      "path": "title",
+      "vendorPath": "properties.jobtitle",
+      "level": "organization"
+    }
+  ],
+  "configuration": [
+    {
+      "type": "passThrough",
+      "properties": {
+        "fromVendor": false,
+        "toVendor": false
+      }
+    },
+    {
+      "type": "inherit"
+    }
+  ],
+  "isLegacy": false
+}
