@@ -206,7 +206,7 @@ function postContactCard(flavor, cloudId, conversationId, con) {
     const doc = new Document();
 
     doc.paragraph()
-        .text('Opportunity ' + con.id)
+        .text('Contact ' + con.id)
 
     const card = doc.applicationCard('Contact: ' + con.firstName + ' ' + con.lastName)
         .description('Email: ' + con.email);
@@ -305,36 +305,36 @@ app.post('/:flavor/message',
             console.log("Checking " + JSON.stringify(c));
 
             switch (c.type) {
-                case "opportunity":
-                    stride.sendTextMessage({
-                        cloudId,
-                        conversationId,
-                        text: "what about opportunity " + c.id + "?",
-                    })
-                    getObject(flavor, conversationId, 'stride-crm-opportunities', c.id, (obj) => {
-                        if (obj) {
-                            console.log("OPP " + prettify_json(obj))
-                            postOpportunityCard(flavor,
-                                cloudId,
-                                conversationId,
-                                obj);
-                        }
-                    })
-                    break;
+            case "opportunity":
+                stride.sendTextMessage({
+                    cloudId,
+                    conversationId,
+                    text: "what about opportunity " + c.id + "?",
+                })
+                getObject(flavor, conversationId, 'stride-crm-opportunities', c.id, (obj) => {
+                    if (obj) {
+                        console.log("OPP " + prettify_json(obj))
+                        postOpportunityCard(flavor,
+                                            cloudId,
+                                            conversationId,
+                                            obj);
+                    }
+                })
+                break;
 
-                case "account":
-                    stride.sendTextMessage({
-                        cloudId,
-                        conversationId,
-                        text: "what about account " + c.id + "?",
-                    })
+            case "account":
+                stride.sendTextMessage({
+                    cloudId,
+                    conversationId,
+                    text: "what about account " + c.id + "?",
+                })
 
-                    getObject(flavor, conversationId, 'accounts', c.id, (obj) => {
-                        if (obj) {
-                            console.log("Yo " + prettify_json(obj))
-                        }
-                    })
-                    break;
+                getObject(flavor, conversationId, 'accounts', c.id, (obj) => {
+                    if (obj) {
+                        console.log("Yo " + prettify_json(obj))
+                    }
+                })
+                break;
 
                 case "lead":
                     getObject(flavor, conversationId, 'stride-crm-lead', c.id, (lead) => {
@@ -431,9 +431,9 @@ app.post('/:flavor/bot-mention',
         if (m !== null) {
             res.sendStatus(200);
             createNewContact(flavor,
-                req.body.conversation.id,
-                req.body.message.text,
-                m);
+                             req.body.conversation.id,
+                             req.body.message.text,
+                             m);
             return;
         }
 
@@ -887,9 +887,9 @@ app.get('/:flavor/auth', (req, res) => {
             // this is our first bit of activity...
             // create definitions and transformations
             console.log("CREATING DEFINITIONS...");
-            ce.createDefinitions(() => {
+            ce.createDefinitions(()=>{
                 console.log("CREATING TRANSFORMATIONS...");
-                ce.createAllTransformations(() => {
+                ce.createAllTransformations(()=>{
                     console.log("CREATING FORMULA...");
                     // now create the formula
                     ce.createFormula(conversationId, flavor, (formulaId) => {
@@ -931,26 +931,6 @@ app.post('/:flavor/ce-callback/:conversationId', (req, res) => {
     }
 });
 
-app.post('/listener', (req, res) => {
-    console.log(req.body);
-    res.send("OK");
-
-    let closeInstance = {
-        "contacts": {
-            "url": "/hubs/crm/contacts?where=date_updated>'${gmtDate:yyyy-MM-dd'T'HH:mm:ss.SSSSSSXXX}'",
-            "idField": "id",
-            "datesConfiguration": {
-                "updatedDateField": "date_updated",
-                "updatedDateFormat": "yyyy-MM-dd'T'HH:mm:ss.SSSSSSXXX",
-                "createdDateField": "date_created",
-                "createdDateFormat": "yyyy-MM-dd'T'HH:mm:ss.SSSSSSXXX"
-            }
-        }
-    };
-
-
-})
-
 
 // NOTE: db methods reference for Danielle
 
@@ -991,6 +971,7 @@ const checkForErrors = (err, response, body) => {
     }
     return false;
 }
+
 
 
 const showInstance = (conversationId) => {

@@ -143,7 +143,7 @@
 <body ng-controller="cloudelementsController">
     <img src="/flavor/${flavor}/big.png" width="80">
     <p>
-        Please use the below link to log in to ${flavorName}. After you're done, please close this dialog!
+        Please use the button to log in to ${flavorName}. After you're done, please close the dialog!
     </p>
     <div class="ak-button-group" id="connectstuff">
         <input type="button" class="ak-button" name="connect" value="Connect to ${flavorName}" id="connect1" onclick="connectToProvider()">
@@ -155,65 +155,39 @@
 
 
 
-    <div class="ak-field-group object-label">
+    <div class="ak-field-group repository-label">
       <label for="object">Objects</label>
     </div>
 
     <ul class="mapping-list">
       <li width="300">
-          <span class="object-name">Leads</span>
+          <span class="object-name" width="200">Leads</span>
           <span class="mapping-actions">
-              edit <svg focusable="false" class="icon edit-button"><use xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#ak-icon-editor/edit"></use></svg>
-              <svg focusable="false" class="icon done-button"><use xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#ak-icon-check-circle"></use></svg>
-              del <svg focusable="false" class="icon remove-button"><use xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#ak-icon-editor/remove"></use></svg>
+            <button class="add-button ak-button ak-button__appearance-default" aria-disabled="false" >Create</button>
+            <button class="add-button ak-button ak-button__appearance-default" aria-disabled="false" >Update</button>
           </span>
-          <div class="notification-group-container">
-            <ul class="clearfix group-item">
-                <li class="ak-field-checkbox">
-                    <input type="checkbox" class="notification-item" id="Leads_Create" data-id="create" checked="">
-                    <label for="Leads_Create">Create</label>
-                </li>
-                <li class="ak-field-checkbox">
-                    <input type="checkbox" class="notification-item" id="Leads_update" data-id="update" checked="">
-                    <label for="Leads_update">Update</label>
-                </li>
-            </ul>
-          </div>
-            <div class="notification-group-container">
-                <p>Notify room with activity from:</p>
-                <ul class="notification-group-list">
-                    <li class="clearfix group-item">
-                      <h2>Pull requests</h2>
-                      <ul class="notification-list clearfix">
-                          <li class="ak-field-checkbox">
-                            <input type="checkbox" class="notification-item" id="Leads__pullrequest_fulfilled" data-id="pullrequest:fulfilled" checked="">
-                            <label for="Leads__pullrequest_fulfilled">Merged</label>
-                          </li>
-                          <li class="ak-field-checkbox">
-                            <input type="checkbox" class="notification-item" id="Leads__pullrequest_approved" data-id="pullrequest:approved" checked="">
-                            <label for="Leads__pullrequest_approved">Approved</label>
-                          </li>
-                          <li class="ak-field-checkbox">
-                            <input type="checkbox" class="notification-item" id="Leads__pullrequest_unapproved" data-id="pullrequest:unapproved" checked="">
-                            <label for="Leads__pullrequest_unapproved">Unapproved</label>
-                          </li>
-                          <li class="ak-field-checkbox">
-                            <input type="checkbox" class="notification-item" id="Leads__pullrequest_rejected" data-id="pullrequest:rejected">
-                            <label for="Leads__pullrequest_rejected">Declined</label>
-                          </li>
-                          <li class="ak-field-checkbox">
-                            <input type="checkbox" class="notification-item" id="Leads__pullrequest_comment_created" data-id="pullrequest:comment_created">
-                            <label for="Leads__pullrequest_comment_created">Commented</label>
-                          </li>
-                          <li class="ak-field-checkbox">
-                            <input type="checkbox" class="notification-item" id="Leads__pullrequest_created" data-id="pullrequest:created" checked="">
-                            <label for="Leads__pullrequest_created">Created</label>
-                          </li>
-                      </ul>
-                    </li>
-                </ul>
-              </div>
       </li>
+      <li width="300">
+        <span class="object-name" width="200">Accounts</span>
+        <span class="mapping-actions">
+            <button class="add-button ak-button ak-button__appearance-default" aria-disabled="false" disabled="false">Create</button>
+            <button class="add-button ak-button ak-button__appearance-default" aria-disabled="false" disabled="false">Update</button>
+        </span>
+    </li>
+    <li width="300">
+        <span class="object-name" width="200">Opportunities</span>
+        <span class="mapping-actions">
+            <button class="add-button ak-button ak-button__appearance-default" aria-disabled="false" disabled="false">Create</button>
+            <button class="add-button ak-button ak-button__appearance-default" aria-disabled="false" disabled="false">Update</button>
+        </span>
+    </li>
+
+      <div class="ak-field-group">
+        <label for="username">Add an object</label>
+        <div class="select2-container repository-select aui-select2-container" id="s2id_autogen3"><a href="javascript:void(0)" onclick="return false;" class="select2-choice select2-default" tabindex="-1"> 
+            <span class="select2-chosen">Select...</span><abbr class="select2-search-choice-close"></abbr>   <span class="select2-arrow"><b></b></span></a><input class="select2-focusser select2-offscreen" type="text" id="s2id_autogen4"></div><input type="hidden" class="repository-select  select2-offscreen" tabindex="-1">
+        <button class="add-button ak-button ak-button__appearance-default" aria-disabled="true" disabled="">Add</button>
+      </div>
       <!--
       <li>
         <span class="object-name">Accounts</span>
