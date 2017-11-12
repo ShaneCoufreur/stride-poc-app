@@ -6,14 +6,14 @@
 
 <head>
     <title>CRM Configuration</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta charset="utf-8">
-     <link rel="stylesheet" href="https://ajax.googleapis.com/ajax/libs/angular_material/1.0.0/angular-material.min.css">
-      <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.8/angular.min.js"></script>
-      <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.8/angular-animate.min.js"></script>
-      <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.8/angular-aria.min.js"></script>
-      <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.8/angular-messages.min.js"></script>
-      <script src="https://ajax.googleapis.com/ajax/libs/angular_material/1.0.0/angular-material.min.js"></script>
+    <link rel="stylesheet" href="https://ajax.googleapis.com/ajax/libs/angular_material/1.0.0/angular-material.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.8/angular.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.8/angular-animate.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.8/angular-aria.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.8/angular-messages.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/angular_material/1.0.0/angular-material.min.js"></script>
     <!-- <link rel="stylesheet" type="text/css" href="westernunion.css"> -->
     <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.2.1/semantic.min.css">
 
@@ -31,112 +31,112 @@
     <script src='https://dev-lib.stride.com/javascript/simple-xdm.js'></script>
 
     <script>
-     $(document).ready(function() {
-         if ('${flavor}' === 'closeio') {
-             console.log("doing the closeio thing");
-             $('#connectstuff').prepend('<input type="text" id="apikey" placeholder="API Key" size="56"/>');
-         }
+        $(document).ready(function() {
+            if ('${flavor}' === 'closeio') {
+                console.log("doing the closeio thing");
+                $('#connectstuff').prepend('<input type="text" id="apikey" placeholder="API Key" size="56"/>');
+            }
 
-         /**
-          * Load configuration settings from the app backend for this conversation
-          */
-         AP.auth.withToken(function(err, token) {
-             $.ajax({
-                 type: 'GET',
-                 url: '/${flavor}/module/config/content',
-                 headers: {
-                     'Authorization': 'Bearer ' + token
-                 },
-                 dataType: 'json',
-                 success: function(data) {
-                     var notificationLevel = data.notificationLevel;
-                     switch (notificationLevel) {
-                         case "INSTANT":
-                             $("#option1").prop("checked", true);
-                             break;
-                         case "DAILY":
-                             $("#option2").prop("checked", true);
-                             break;
-                         default:
-                             $("#option3").prop("checked", true);
-                     }
-                 },
-                 error: function(data) {
-                     console.log(data);
-                 }
-             });
-         });
+            /**
+             * Load configuration settings from the app backend for this conversation
+             */
+            AP.auth.withToken(function(err, token) {
+                $.ajax({
+                    type: 'GET',
+                    url: '/${flavor}/module/config/content',
+                    headers: {
+                        'Authorization': 'Bearer ' + token
+                    },
+                    dataType: 'json',
+                    success: function(data) {
+                        var notificationLevel = data.notificationLevel;
+                        switch (notificationLevel) {
+                            case "INSTANT":
+                                $("#option1").prop("checked", true);
+                                break;
+                            case "DAILY":
+                                $("#option2").prop("checked", true);
+                                break;
+                            default:
+                                $("#option3").prop("checked", true);
+                        }
+                    },
+                    error: function(data) {
+                        console.log(data);
+                    }
+                });
+            });
 
-         /**
-          * Call the app backend to save configuration settings when the user clicks on the "Save" action
-          */
-         AP.register({
-             "glance-update": function(data) {
-                 console.log("Glance was updated: ", data);
-             },
+            /**
+             * Call the app backend to save configuration settings when the user clicks on the "Save" action
+             */
+            AP.register({
+                "glance-update": function(data) {
+                    console.log("Glance was updated: ", data);
+                },
 
-             "dialog-button-clicked": function(event, closeDialog) {
-                 if (event.action === "action-save") {
+                "dialog-button-clicked": function(event, closeDialog) {
+                    if (event.action === "action-save") {
 
-                     //events are currently processed synchronously in the JavaScript API. Using this makes sure the dialog
-                     //doesn't close before the AJAX call completes
-                     closeDialog(false);
+                        //events are currently processed synchronously in the JavaScript API. Using this makes sure the dialog
+                        //doesn't close before the AJAX call completes
+                        closeDialog(false);
 
-                     var notificationLevel = $("input[id=option1]:checked").val() ? "INSTANT" :
-                     $("input[id=option2]:checked").val() ? "DAILY" : "NONE";
+                        var notificationLevel = $("input[id=option1]:checked").val() ? "INSTANT" :
+                            $("input[id=option2]:checked").val() ? "DAILY" : "NONE";
 
-                     AP.auth.withToken(function(err, token) {
-                         $.ajax({
-                             type: 'POST',
-                             url: '/${flavor}/module/config/content',
-                             headers: {
-                                 'Authorization': 'Bearer ' + token
-                             },
-                             data: {
-                                 'notificationLevel': notificationLevel
-                             },
-                             dataType: 'json',
-                             success: function(data) {
-                                 console.log("saved settings");
-                                 AP.dialog.close();
-                             },
-                             error: function(data) {
-                                 console.log("Error", data);
-                             }
-                         });
-                     });
+                        AP.auth.withToken(function(err, token) {
+                            $.ajax({
+                                type: 'POST',
+                                url: '/${flavor}/module/config/content',
+                                headers: {
+                                    'Authorization': 'Bearer ' + token
+                                },
+                                data: {
+                                    'notificationLevel': notificationLevel
+                                },
+                                dataType: 'json',
+                                success: function(data) {
+                                    console.log("saved settings");
+                                    AP.dialog.close();
+                                },
+                                error: function(data) {
+                                    console.log("Error", data);
+                                }
+                            });
+                        });
 
-                 }
-                 if (event.action === "action-close") {
-                     console.log("closing dialog")
-                 }
-             }
-         })
-     });
+                    }
+                    if (event.action === "action-close") {
+                        console.log("closing dialog")
+                    }
+                }
+            })
+        });
 
-     function authFailure() {
-         $('#authanswer').removeClass("auth-good").addClass("auth-bad").text("Auth failed");
-     }
+        function authFailure() {
+            $('#authanswer').removeClass("auth-good").addClass("auth-bad").text("Auth failed");
+        }
 
-     function authSuccess() {
-         $('#authanswer').removeClass("auth-bad").addClass("auth-good").text("Auth success!");
-     }
+        function authSuccess() {
+            $('#authanswer').removeClass("auth-bad").addClass("auth-good").text("Auth success!");
+        }
 
-     function connectToProvider() {
-         AP.auth.withToken(function(err, token) {
-             if ('${flavor}' === 'closeio') {
-                 var code = $('#apikey').val();
-                 $.ajax({
-                     type: 'GET',
-                     url: "/${flavor}/auth?code=" + code + "&state=" + token,
-                     error: authFailure,
-                     success: authSuccess,
-                 });
-             } else {
-                 window.open("/${flavor}/login?jwt=" + token);
-             }
-         });
-     }
+        function connectToProvider() {
+            AP.auth.withToken(function(err, token) {
+                if ('${flavor}' === 'closeio') {
+                    var code = $('#apikey').val();
+                    $.ajax({
+                        type: 'GET',
+                        url: "/${flavor}/auth?code=" + code + "&state=" + token,
+                        error: authFailure,
+                        success: authSuccess,
+                    });
+                } else {
+                    window.open("/${flavor}/login?jwt=" + token);
+                }
+            });
+        }
     </script>
 </head>
 
@@ -151,61 +151,44 @@
     </div>
 
 
+    <div ng-show="">
+        <div class="ak-field-group repository-label">
+            <label for="object">Objects</label>
+        </div>
 
+        <ul class="mapping-list">
+            <li width="300">
+                <span class="object-name" width="200">Leads</span>
+                <span class="mapping-actions">
+                        <button class="add-button ak-button ak-button__appearance-default" aria-disabled="false" >Create</button>
+                        <button class="add-button ak-button ak-button__appearance-default" aria-disabled="false" >Update</button>
+                      </span>
+            </li>
+            <li width="300">
+                <span class="object-name" width="200">Accounts</span>
+                <span class="mapping-actions">
+                        <button class="add-button ak-button ak-button__appearance-default" aria-disabled="false" disabled="false">Create</button>
+                        <button class="add-button ak-button ak-button__appearance-default" aria-disabled="false" disabled="false">Update</button>
+                    </span>
+            </li>
+            <li width="300">
+                <span class="object-name" width="200">Opportunities</span>
+                <span class="mapping-actions">
+                        <button class="add-button ak-button ak-button__appearance-default" aria-disabled="false" disabled="false">Create</button>
+                        <button class="add-button ak-button ak-button__appearance-default" aria-disabled="false" disabled="false">Update</button>
+                    </span>
+            </li>
 
-
-
-    <div class="ak-field-group repository-label">
-      <label for="object">Objects</label>
+            <div class="ak-field-group">
+                <label for="username">Add an object</label>
+                <div class="select2-container repository-select aui-select2-container" id="s2id_autogen3">
+                    <a href="javascript:void(0)" onclick="return false;" class="select2-choice select2-default" tabindex="-1">
+                        <span class="select2-chosen">Select...</span><abbr class="select2-search-choice-close"></abbr> <span class="select2-arrow"><b></b></span></a><input class="select2-focusser select2-offscreen" type="text" id="s2id_autogen4"></div>
+                <input type="hidden" class="repository-select  select2-offscreen" tabindex="-1">
+                <button class="add-button ak-button ak-button__appearance-default" aria-disabled="true" disabled="">Add</button>
+            </div>
+        </ul>
     </div>
-
-    <ul class="mapping-list">
-      <li width="300">
-          <span class="object-name" width="200">Leads</span>
-          <span class="mapping-actions">
-            <button class="add-button ak-button ak-button__appearance-default" aria-disabled="false" >Create</button>
-            <button class="add-button ak-button ak-button__appearance-default" aria-disabled="false" >Update</button>
-          </span>
-      </li>
-      <li width="300">
-        <span class="object-name" width="200">Accounts</span>
-        <span class="mapping-actions">
-            <button class="add-button ak-button ak-button__appearance-default" aria-disabled="false" disabled="false">Create</button>
-            <button class="add-button ak-button ak-button__appearance-default" aria-disabled="false" disabled="false">Update</button>
-        </span>
-    </li>
-    <li width="300">
-        <span class="object-name" width="200">Opportunities</span>
-        <span class="mapping-actions">
-            <button class="add-button ak-button ak-button__appearance-default" aria-disabled="false" disabled="false">Create</button>
-            <button class="add-button ak-button ak-button__appearance-default" aria-disabled="false" disabled="false">Update</button>
-        </span>
-    </li>
-
-      <div class="ak-field-group">
-        <label for="username">Add an object</label>
-        <div class="select2-container repository-select aui-select2-container" id="s2id_autogen3"><a href="javascript:void(0)" onclick="return false;" class="select2-choice select2-default" tabindex="-1"> 
-            <span class="select2-chosen">Select...</span><abbr class="select2-search-choice-close"></abbr>   <span class="select2-arrow"><b></b></span></a><input class="select2-focusser select2-offscreen" type="text" id="s2id_autogen4"></div><input type="hidden" class="repository-select  select2-offscreen" tabindex="-1">
-        <button class="add-button ak-button ak-button__appearance-default" aria-disabled="true" disabled="">Add</button>
-      </div>
-      <!--
-      <li>
-        <span class="object-name">Accounts</span>
-        <span class="mapping-actions"></span>
-      </li>
-      <li>
-        <span class="object-name">Opportunities</span>
-        <span class="mapping-actions"></span>
-      </li>
-      <li>
-        <span class="object-name">Contacts</span>
-        <span class="mapping-actions"></span>
-      </li>
-    -->
-
-    </ul>
-
-
 
     <script src="/ng-config-dialog.js"></script>
 
